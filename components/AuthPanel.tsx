@@ -108,7 +108,7 @@ export default function AuthPanel() {
       <div className="auth-copy">
         <div className="auth-label">Account</div>
         <h2>{mode === "login" ? "Sign in" : "Create an account"}</h2>
-        <p>Save your account foundation now; usage limits will be added next.</p>
+        <p>Free plan includes 3 extractions per day.</p>
       </div>
 
       <form className="auth-form" onSubmit={submit}>
