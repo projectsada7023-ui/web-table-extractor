@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import AuthPanel from "@/components/AuthPanel";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
 type ExtractResponse = { url: string; title: string; tables: ExtractedTable[]; usedToday: number; dailyLimit: number; remainingToday: number };
