@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Web Table Extractor",
+  "version": "0.1.0",
+  "description": "Detect HTML tables on the current webpage and export them as CSV.",
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Web Table Extractor"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
