@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import AuthPanel from "@/components/AuthPanel";
+import { createClient } from "@supabase/supabase-js";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
 type ExtractResponse = { url: string; title: string; tables: ExtractedTable[] };
@@ -48,6 +49,24 @@ export default function Home() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
       setData(payload);
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { error: usageError } = await supabase.from("extraction_usage").insert({
+            user_id: userData.user.id,
+            source_url: payload.url,
+            table_count: payload.tables.length,
+            status: "success",
+          });
+          if (usageError) {
+            console.warn("Usage tracking failed:", usageError.message);
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Extraction failed.");
     } finally {
