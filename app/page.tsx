@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
 type ExtractResponse = { url: string; title: string; tables: ExtractedTable[] };
@@ -21,7 +22,7 @@ export default function Home() {
   const csv = useMemo(() => {
     if (!table) return "";
     return [
-      table.headers.map(escapeCsv).join(","),
+      "\ufeff" + table.headers.map(escapeCsv).join(","),
       ...table.rows.map((row) => row.map(escapeCsv).join(","))
     ].join("\n");
   }, [table]);
@@ -153,6 +154,19 @@ export default function Home() {
     URL.revokeObjectURL(href);
   }
 
+  function downloadExcel() {
+    if (!table) return;
+    const worksheet = XLSX.utils.aoa_to_sheet([table.headers, ...table.rows]);
+    worksheet["!cols"] = table.headers.map((header, index) => {
+      const values = [header, ...table.rows.map((row) => row[index] ?? "")];
+      const maxLength = Math.max(...values.map((value) => String(value).length), 10);
+      return { wch: Math.min(maxLength + 2, 50) };
+    });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Table ${selectedTableIndex + 1}`);
+    XLSX.writeFile(workbook, `extracted-table-${selectedTableIndex + 1}.xlsx`);
+  }
+
   return (
     <main>
       <section className="hero">
@@ -193,9 +207,14 @@ export default function Home() {
                   {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected
                 </div>
               </div>
-              <button className="secondary" onClick={downloadCsv} disabled={!table}>
-                Export CSV
-              </button>
+              <div className="export-actions">
+                <button className="secondary" onClick={downloadCsv} disabled={!table}>
+                  Export CSV
+                </button>
+                <button className="primary" onClick={downloadExcel} disabled={!table}>
+                  Export Excel
+                </button>
+              </div>
             </div>
 
             {data.tables.length > 0 && (
