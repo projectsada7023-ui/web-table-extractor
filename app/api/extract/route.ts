@@ -14,11 +14,18 @@ function isBlockedHost(hostname: string) {
     host.startsWith("172.19.") || host.startsWith("169.254.");
 }
 
-function getSupabase() {
+function getSupabase(accessToken: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("Supabase is not configured.");
-  return createClient(url, key);
+
+  return createClient(url, key, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  });
 }
 
 function startOfTodayIso() {
@@ -35,7 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please sign in before extracting." }, { status: 401 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabase(accessToken);
     const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
     if (userError || !userData.user) {
       return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
