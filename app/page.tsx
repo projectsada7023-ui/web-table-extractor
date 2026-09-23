@@ -6,7 +6,7 @@ import AuthPanel from "@/components/AuthPanel";
 import { createClient } from "@supabase/supabase-js";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
-type ExtractResponse = { url: string; title: string; tables: ExtractedTable[] };
+type ExtractResponse = { url: string; title: string; tables: ExtractedTable[]; usedToday: number; dailyLimit: number; remainingToday: number };
 
 function escapeCsv(value: string) {
   return '"' + value.replaceAll('"', '""') + '"';
@@ -18,6 +18,7 @@ export default function Home() {
   const [selectedTableIndex, setSelectedTableIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
 
   const table = data?.tables[selectedTableIndex] ?? null;
 
@@ -41,14 +42,26 @@ export default function Home() {
 
     setLoading(true);
     try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      if (!supabaseUrl || !supabaseKey) throw new Error("Supabase is not configured.");
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Please sign in before extracting.");
+
       const response = await fetch("/api/extract", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ url: url.trim() }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
       setData(payload);
+      setUsageRemaining(payload.remainingToday);
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -304,6 +317,9 @@ export default function Home() {
             </button>
           </form>
           {error && <div className="error">{error}</div>}
+          {usageRemaining !== null && !error && (
+            <div className="usage-banner">Free plan: <strong>{usageRemaining}/3</strong> extractions remaining today.</div>
+          )}
         </div>
 
         {data && (
@@ -312,7 +328,7 @@ export default function Home() {
               <div>
                 <h2>{data.title || "Extracted tables"}</h2>
                 <div className="meta">
-                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected
+                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected · {data.remainingToday}/{data.dailyLimit} extractions remaining today
                 </div>
               </div>
               <div className="export-actions">
