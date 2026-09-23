@@ -1,0 +1,78 @@
+body {
+  width: 360px;
+  margin: 0;
+  padding: 18px;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+p {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+select, button {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+select {
+  background: #111827;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+}
+
+button {
+  margin-top: 14px;
+  border: 0;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+
+button:disabled, select:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.preview {
+  margin-top: 14px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+th, td {
+  padding: 6px;
+  border-bottom: 1px solid #334155;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  background: #1e293b;
+}
