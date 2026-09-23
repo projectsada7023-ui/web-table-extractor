@@ -12,10 +12,12 @@ function escapeCsv(value: string) {
 export default function Home() {
   const [url, setUrl] = useState("");
   const [data, setData] = useState<ExtractResponse | null>(null);
+  const [selectedTableIndex, setSelectedTableIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const table = data?.tables[0] ?? null;
+  const table = data?.tables[selectedTableIndex] ?? null;
+
   const csv = useMemo(() => {
     if (!table) return "";
     return [
@@ -28,7 +30,12 @@ export default function Home() {
     event.preventDefault();
     setError("");
     setData(null);
-    if (!url.trim()) { setError("Enter a webpage URL first."); return; }
+    setSelectedTableIndex(0);
+    if (!url.trim()) {
+      setError("Enter a webpage URL first.");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch("/api/extract", {
@@ -46,12 +53,102 @@ export default function Home() {
     }
   }
 
+  function updateCell(rowIndex: number, columnIndex: number, value: string) {
+    if (!data) return;
+    setData((current) => {
+      if (!current) return current;
+      const tables = current.tables.map((item, tableIndex) => {
+        if (tableIndex !== selectedTableIndex) return item;
+        const rows = item.rows.map((row, index) =>
+          index === rowIndex
+            ? row.map((cell, cellIndex) => cellIndex === columnIndex ? value : cell)
+            : row
+        );
+        return { ...item, rows };
+      });
+      return { ...current, tables };
+    });
+  }
+
+  function updateHeader(columnIndex: number, value: string) {
+    if (!data) return;
+    setData((current) => {
+      if (!current) return current;
+      const tables = current.tables.map((item, tableIndex) => {
+        if (tableIndex !== selectedTableIndex) return item;
+        const headers = item.headers.map((header, index) => index === columnIndex ? value : header);
+        return { ...item, headers };
+      });
+      return { ...current, tables };
+    });
+  }
+
+  function addRow() {
+    if (!data || !table) return;
+    setData((current) => {
+      if (!current) return current;
+      const tables = current.tables.map((item, tableIndex) =>
+        tableIndex === selectedTableIndex
+          ? { ...item, rows: [...item.rows, Array(item.headers.length).fill("")] }
+          : item
+      );
+      return { ...current, tables };
+    });
+  }
+
+  function deleteRow(rowIndex: number) {
+    if (!data) return;
+    setData((current) => {
+      if (!current) return current;
+      const tables = current.tables.map((item, tableIndex) =>
+        tableIndex === selectedTableIndex
+          ? { ...item, rows: item.rows.filter((_, index) => index !== rowIndex) }
+          : item
+      );
+      return { ...current, tables };
+    });
+  }
+
+  function addColumn() {
+    if (!data) return;
+    setData((current) => {
+      if (!current) return current;
+      const tables = current.tables.map((item, tableIndex) =>
+        tableIndex === selectedTableIndex
+          ? {
+              ...item,
+              headers: [...item.headers, `Column ${item.headers.length + 1}`],
+              rows: item.rows.map((row) => [...row, ""]),
+            }
+          : item
+      );
+      return { ...current, tables };
+    });
+  }
+
+  function deleteColumn(columnIndex: number) {
+    if (!data || !table || table.headers.length <= 1) return;
+    setData((current) => {
+      if (!current) return current;
+      const tables = current.tables.map((item, tableIndex) =>
+        tableIndex === selectedTableIndex
+          ? {
+              ...item,
+              headers: item.headers.filter((_, index) => index !== columnIndex),
+              rows: item.rows.map((row) => row.filter((_, index) => index !== columnIndex)),
+            }
+          : item
+      );
+      return { ...current, tables };
+    });
+  }
+
   function downloadCsv() {
     if (!csv) return;
     const href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = href;
-    anchor.download = "extracted-table.csv";
+    anchor.download = `extracted-table-${selectedTableIndex + 1}.csv`;
     anchor.click();
     URL.revokeObjectURL(href);
   }
@@ -62,14 +159,27 @@ export default function Home() {
         <div className="container">
           <div className="eyebrow">Autonomous Web Data Extractor</div>
           <h1>Turn web tables into clean data.</h1>
-          <p className="subtitle">Paste a public webpage URL. The engine finds HTML tables, extracts their headers and rows, and lets you export the first detected table as CSV.</p>
+          <p className="subtitle">
+            Paste a public webpage URL. The engine finds HTML tables, extracts their headers and rows,
+            and lets you edit and export the selected table as CSV.
+          </p>
         </div>
       </section>
+
       <section className="container">
         <div className="panel">
           <form className="form" onSubmit={extract}>
-            <input className="input" type="url" placeholder="https://example.com/page-with-a-table" value={url} onChange={(event) => setUrl(event.target.value)} aria-label="Webpage URL" />
-            <button className="primary" disabled={loading} type="submit">{loading ? "Extracting..." : "Extract tables"}</button>
+            <input
+              className="input"
+              type="url"
+              placeholder="https://example.com/page-with-a-table"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              aria-label="Webpage URL"
+            />
+            <button className="primary" disabled={loading} type="submit">
+              {loading ? "Extracting..." : "Extract tables"}
+            </button>
           </form>
           {error && <div className="error">{error}</div>}
         </div>
@@ -78,23 +188,104 @@ export default function Home() {
           <section className="results">
             <div className="result-header">
               <div>
-                <h2>{data.title || "Extracted table"}</h2>
-                <div className="meta">{data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected</div>
+                <h2>{data.title || "Extracted tables"}</h2>
+                <div className="meta">
+                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected
+                </div>
               </div>
-              <button className="secondary" onClick={downloadCsv} disabled={!table}>Export CSV</button>
+              <button className="secondary" onClick={downloadCsv} disabled={!table}>
+                Export CSV
+              </button>
             </div>
-            {table ? (
-              <div className="table-wrap">
-                <table>
-                  <thead><tr>{table.headers.map((header, index) => <th key={index}>{header || `Column ${index + 1}`}</th>)}</tr></thead>
-                  <tbody>
-                    {table.rows.map((row, rowIndex) => (
-                      <tr key={rowIndex}>{table.headers.map((_, columnIndex) => <td key={columnIndex}>{row[columnIndex] ?? ""}</td>)}</tr>
-                    ))}
-                  </tbody>
-                </table>
+
+            {data.tables.length > 0 && (
+              <div className="table-selector">
+                {data.tables.map((item, index) => (
+                  <button
+                    key={item.index}
+                    className={index === selectedTableIndex ? "table-tab active" : "table-tab"}
+                    onClick={() => setSelectedTableIndex(index)}
+                    type="button"
+                  >
+                    Table {index + 1}
+                    <span>{item.rows.length} rows</span>
+                  </button>
+                ))}
               </div>
-            ) : <div className="panel empty">No HTML tables were found on this page.</div>}
+            )}
+
+            {table ? (
+              <>
+                <div className="editor-toolbar">
+                  <span>Edit cells directly in the table.</span>
+                  <div className="toolbar-actions">
+                    <button className="secondary" onClick={addRow} type="button">+ Row</button>
+                    <button className="secondary" onClick={addColumn} type="button">+ Column</button>
+                  </div>
+                </div>
+
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        {table.headers.map((header, columnIndex) => (
+                          <th key={columnIndex}>
+                            <div className="header-editor">
+                              <input
+                                value={header}
+                                onChange={(event) => updateHeader(columnIndex, event.target.value)}
+                                aria-label={`Column ${columnIndex + 1} header`}
+                              />
+                              <button
+                                className="delete-column"
+                                onClick={() => deleteColumn(columnIndex)}
+                                disabled={table.headers.length <= 1}
+                                title="Delete column"
+                                type="button"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </th>
+                        ))}
+                        <th className="row-actions-heading">Row</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex}>
+                          {table.headers.map((_, columnIndex) => (
+                            <td key={columnIndex}>
+                              <input
+                                value={row[columnIndex] ?? ""}
+                                onChange={(event) => updateCell(rowIndex, columnIndex, event.target.value)}
+                                aria-label={`Row ${rowIndex + 1}, column ${columnIndex + 1}`}
+                              />
+                            </td>
+                          ))}
+                          <td className="row-action">
+                            <button
+                              className="delete-row"
+                              onClick={() => deleteRow(rowIndex)}
+                              title={`Delete row ${rowIndex + 1}`}
+                              type="button"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {table.rows.length === 0 && (
+                  <div className="panel empty">No rows remain. Use + Row to add one.</div>
+                )}
+              </>
+            ) : (
+              <div className="panel empty">No HTML tables were found on this page.</div>
+            )}
           </section>
         )}
       </section>
