@@ -25,6 +25,7 @@ h1 { margin: 10px 0 14px; font-size: clamp(36px, 6vw, 64px); line-height: 1; }
 .error { margin-top: 14px; color: var(--danger); }
 .results { margin: 24px 0 64px; }
 .result-header { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 14px; }
+.export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .result-header h2 { margin: 0; }
 .meta { color: var(--muted); font-size: 14px; }
 .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 14px; }
