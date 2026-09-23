@@ -63,23 +63,6 @@ export default function Home() {
       setData(payload);
       setUsageRemaining(payload.remainingToday);
 
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      if (supabaseUrl && supabaseKey) {
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          const { error: usageError } = await supabase.from("extraction_usage").insert({
-            user_id: userData.user.id,
-            source_url: payload.url,
-            table_count: payload.tables.length,
-            status: "success",
-          });
-          if (usageError) {
-            console.warn("Usage tracking failed:", usageError.message);
-          }
-        }
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Extraction failed.");
     } finally {
