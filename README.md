@@ -45,3 +45,17 @@ curl -X POST "https://web-table-extractor.vercel.app/api/v1/extract" \
 ```
 
 > API authentication, rate limiting, and stronger SSRF protection are planned for a later production-hardening phase.
+
+
+## Supabase authentication
+
+The dashboard now includes a Supabase email/password authentication foundation.
+
+Configure these environment variables in Vercel (and locally if needed):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+Do not use or expose a Supabase secret/service-role key in the browser.
+
+The current authentication layer supports sign up, sign in, session detection, and logout. Usage tracking and limits will be added after authentication is verified.
