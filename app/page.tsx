@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
+import AuthPanel from "@/components/AuthPanel";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
 type ExtractResponse = { url: string; title: string; tables: ExtractedTable[] };
@@ -267,6 +268,8 @@ export default function Home() {
       </section>
 
       <section className="container">
+        <AuthPanel />
+
         <div className="panel">
           <form className="form" onSubmit={extract}>
             <input
