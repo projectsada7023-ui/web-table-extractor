@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
 type ExtractResponse = { url: string; title: string; tables: ExtractedTable[] };
@@ -154,17 +154,76 @@ export default function Home() {
     URL.revokeObjectURL(href);
   }
 
-  function downloadExcel() {
+  async function downloadExcel() {
     if (!table) return;
-    const worksheet = XLSX.utils.aoa_to_sheet([table.headers, ...table.rows]);
-    worksheet["!cols"] = table.headers.map((header, index) => {
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Web Table Extractor";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const worksheet = workbook.addWorksheet(`Table ${selectedTableIndex + 1}`, {
+      views: [{ state: "frozen", ySplit: 1 }]
+    });
+
+    worksheet.columns = table.headers.map((header, index) => {
       const values = [header, ...table.rows.map((row) => row[index] ?? "")];
       const maxLength = Math.max(...values.map((value) => String(value).length), 10);
-      return { wch: Math.min(maxLength + 2, 50) };
+      return {
+        header,
+        key: `column${index}`,
+        width: Math.min(maxLength + 3, 45)
+      };
     });
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `Table ${selectedTableIndex + 1}`);
-    XLSX.writeFile(workbook, `extracted-table-${selectedTableIndex + 1}.xlsx`);
+
+    table.rows.forEach((row) => worksheet.addRow(row));
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 24;
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2563EB" } };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFD1D5DB" } },
+        bottom: { style: "thin", color: { argb: "FFD1D5DB" } }
+      };
+    });
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: "top", wrapText: true };
+        cell.border = {
+          bottom: { style: "hair", color: { argb: "FFE5E7EB" } }
+        };
+        if (rowNumber % 2 === 0) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
+        }
+      });
+    });
+
+    const lastRow = worksheet.rowCount;
+    const lastColumn = worksheet.columnCount;
+    if (lastRow > 0 && lastColumn > 0) {
+      worksheet.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: lastRow, column: lastColumn }
+      };
+    }
+
+    worksheet.getColumn(1).width = Math.max(worksheet.getColumn(1).width ?? 10, 14);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = `extracted-table-${selectedTableIndex + 1}.xlsx`;
+    anchor.click();
+    URL.revokeObjectURL(href);
   }
 
   return (
