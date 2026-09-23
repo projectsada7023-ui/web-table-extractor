@@ -110,11 +110,9 @@ export async function POST(request: Request) {
     const html = await response.text();
     const tables = extractTables(html);
 
-    const { error: usageError } = await supabase.from("extraction_usage").insert({
-      user_id: userData.user.id,
-      source_url: target.toString(),
-      table_count: tables.length,
-      status: "success",
+    const { error: usageError } = await supabase.rpc("record_extraction_usage", {
+      p_source_url: target.toString(),
+      p_table_count: tables.length,
     });
 
     if (usageError) {
