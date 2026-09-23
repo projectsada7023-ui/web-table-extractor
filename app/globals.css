@@ -68,3 +68,14 @@ td input:focus, th input:focus { border-color: var(--accent); background: var(--
 .auth-form .input { flex: 1 1 180px; }
 .auth-switch { background: transparent; border: 0; color: #93c5fd; cursor: pointer; padding: 8px 0; }
 .auth-message { width: 100%; color: #cbd5e1; font-size: 14px; }
+
+
+.usage-banner {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 14px;
+}
