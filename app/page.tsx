@@ -144,6 +144,33 @@ export default function Home() {
     });
   }
 
+  function downloadJson() {
+    if (!table) return;
+    const records = table.rows.map((row) =>
+      Object.fromEntries(table.headers.map((header, index) => [
+        header || `Column ${index + 1}`,
+        row[index] ?? ""
+      ]))
+    );
+    const payload = {
+      sourceUrl: data?.url ?? "",
+      pageTitle: data?.title ?? "",
+      tableNumber: selectedTableIndex + 1,
+      columns: table.headers,
+      rowCount: table.rows.length,
+      data: records
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8"
+    });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = `extracted-table-${selectedTableIndex + 1}.json`;
+    anchor.click();
+    URL.revokeObjectURL(href);
+  }
+
   function downloadCsv() {
     if (!csv) return;
     const href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -269,6 +296,9 @@ export default function Home() {
               <div className="export-actions">
                 <button className="secondary" onClick={downloadCsv} disabled={!table}>
                   Export CSV
+                </button>
+                <button className="secondary" onClick={downloadJson} disabled={!table}>
+                  Export JSON
                 </button>
                 <button className="primary" onClick={downloadExcel} disabled={!table}>
                   Export Excel
