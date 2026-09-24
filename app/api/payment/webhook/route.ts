@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (activeEvents.has(event.event)) {
       update.plan = "pro";
       update.plan_amount = 19900;
-      if (!update.plan_started_at) update.plan_started_at = new Date().toISOString();
+      if (event.event === "subscription.activated") update.plan_started_at = new Date().toISOString();
       update.plan_status = subscription.status ?? "active";
       if (subscription.current_end) update.plan_current_period_end = new Date(subscription.current_end * 1000).toISOString();
     } else if (inactiveEvents.has(event.event)) {
