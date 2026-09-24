@@ -68,9 +68,9 @@ function getSupabase(token: string) {
   return createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } } });
 }
 
-function getServiceSupabase() {
+function getGuestSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("Supabase is not configured.");
   return createClient(url, key);
 }
@@ -92,7 +92,9 @@ export async function POST(request: Request) {
     if (!isGuest) {
       supabase = getSupabase(token);
       const { data: userData, error: userError } = await supabase.auth.getUser(token);
-      if (userError || !userData.user) return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
+      if (userError || !userData.user) {
+        return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
+      }
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles").select("plan").eq("user_id", userData.user.id).maybeSingle();
@@ -111,8 +113,6 @@ export async function POST(request: Request) {
           code: "DAILY_LIMIT_REACHED", plan, usedToday, dailyLimit: DAILY_LIMIT, remainingToday: 0
         }, { status: 429 });
       }
-    } else {
-      usedToday = 0;
     }
 
     const body = await request.json();
@@ -120,11 +120,15 @@ export async function POST(request: Request) {
     if (!rawUrl) return NextResponse.json({ error: "URL is required." }, { status: 400 });
 
     let target: URL;
-    try { target = new URL(rawUrl); }
-    catch { return NextResponse.json({ error: "Enter a valid URL." }, { status: 400 }); }
+    try {
+      target = new URL(rawUrl);
+    } catch {
+      return NextResponse.json({ error: "Enter a valid URL." }, { status: 400 });
+    }
 
-    if (!["http:", "https:"].includes(target.protocol))
+    if (!["http:", "https:"].includes(target.protocol)) {
       return NextResponse.json({ error: "Only HTTP and HTTPS URLs are supported." }, { status: 400 });
+    }
 
     try {
       await assertPublicTarget(target);
@@ -144,8 +148,12 @@ export async function POST(request: Request) {
       for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
         response = await fetch(finalUrl, {
           signal: controller.signal,
-          headers: { "User-Agent": "WebTableExtractor/0.1", Accept: "text/html,application/xhtml+xml" },
-          redirect: "manual", cache: "no-store"
+          headers: {
+            "User-Agent": "WebTableExtractor/0.1",
+            Accept: "text/html,application/xhtml+xml"
+          },
+          redirect: "manual",
+          cache: "no-store"
         });
 
         if (![301, 302, 303, 307, 308].includes(response.status)) break;
@@ -155,7 +163,9 @@ export async function POST(request: Request) {
         }
 
         const location = response.headers.get("location");
-        if (!location) return NextResponse.json({ error: "The target website returned an invalid redirect." }, { status: 502 });
+        if (!location) {
+          return NextResponse.json({ error: "The target website returned an invalid redirect." }, { status: 502 });
+        }
 
         let redirectedUrl: URL;
         try {
@@ -184,33 +194,35 @@ export async function POST(request: Request) {
     }
 
     if (!response!) return NextResponse.json({ error: "Could not fetch the target page." }, { status: 502 });
-    if (!response.ok) return NextResponse.json({ error: `Target site returned HTTP ${response.status}.` }, { status: 502 });
+    if (!response.ok) {
+      return NextResponse.json({ error: `Target site returned HTTP ${response.status}.` }, { status: 502 });
+    }
+
     const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml"))
+    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
       return NextResponse.json({ error: "The target URL did not return an HTML page." }, { status: 415 });
+    }
 
     const html = await response.text();
     const tables = extractTables(html);
 
     if (supabase) {
       const { error: usageError } = await supabase.rpc("record_extraction_usage", {
-        p_source_url: finalUrl.toString(), p_table_count: tables.length
+        p_source_url: finalUrl.toString(),
+        p_table_count: tables.length
       });
-      if (usageError) return NextResponse.json({ error: "Extraction succeeded, but usage could not be recorded." }, { status: 500 });
+      if (usageError) {
+        return NextResponse.json({ error: "Extraction succeeded, but usage could not be recorded." }, { status: 500 });
+      }
     }
 
-    let newUsedToday = usedToday + 1;
-    const result = NextResponse.json({
-      url: finalUrl.toString(), title: extractPageTitle(html), tables, plan,
-      usedToday: newUsedToday,
-      dailyLimit: plan === "pro" ? null : DAILY_LIMIT,
-      remainingToday: plan === "pro" ? null : Math.max(DAILY_LIMIT - newUsedToday, 0)
-    });
-
     if (isGuest) {
-      const existingGuestId = request.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${GUEST_COOKIE}=([^;]+)`))?.[1];
-      const guestId = existingGuestId ?? crypto.randomUUID();
-      const guestSupabase = getServiceSupabase();
+      const rawCookie = request.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${GUEST_COOKIE}=([^;]+)`))?.[1];
+      const guestId = rawCookie && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawCookie)
+        ? rawCookie
+        : crypto.randomUUID();
+
+      const guestSupabase = getGuestSupabase();
       const { data: consumed, error: guestUsageError } = await guestSupabase.rpc("consume_guest_extraction", {
         p_guest_id: guestId
       });
@@ -226,10 +238,23 @@ export async function POST(request: Request) {
             remainingToday: 0
           }, { status: 429 });
         }
-        return NextResponse.json({ error: "Could not record your guest usage." }, { status: 500 });
+
+        return NextResponse.json({
+          error: "Could not record your guest usage. Please refresh the page and try again."
+        }, { status: 500 });
       }
 
-      newUsedToday = Number(consumed ?? 0);
+      const guestUsedToday = Number(consumed ?? 1);
+      const result = NextResponse.json({
+        url: finalUrl.toString(),
+        title: extractPageTitle(html),
+        tables,
+        plan: "free",
+        usedToday: guestUsedToday,
+        dailyLimit: DAILY_LIMIT,
+        remainingToday: Math.max(DAILY_LIMIT - guestUsedToday, 0)
+      });
+
       result.cookies.set({
         name: GUEST_COOKIE,
         value: guestId,
@@ -240,30 +265,26 @@ export async function POST(request: Request) {
         maxAge: 60 * 60 * 24 * 365
       });
 
-      const finalPayload = {
-        url: finalUrl.toString(), title: extractPageTitle(html), tables, plan,
-        usedToday: newUsedToday,
-        dailyLimit: DAILY_LIMIT,
-        remainingToday: Math.max(DAILY_LIMIT - newUsedToday, 0)
-      };
-      result.cookies.set({
-        name: GUEST_COOKIE,
-        value: guestId,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365
-      });
       return result;
     }
 
-    return result;
+    const newUsedToday = usedToday + 1;
+    return NextResponse.json({
+      url: finalUrl.toString(),
+      title: extractPageTitle(html),
+      tables,
+      plan,
+      usedToday: newUsedToday,
+      dailyLimit: plan === "pro" ? null : DAILY_LIMIT,
+      remainingToday: plan === "pro" ? null : Math.max(DAILY_LIMIT - newUsedToday, 0)
+    });
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "The target website is too large or slow to respond. Please try a different URL."
       : error instanceof Error && error.message === "Supabase is not configured."
-        ? error.message : "Could not fetch or parse the target page.";
+        ? error.message
+        : "Could not fetch or parse the target page.";
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
