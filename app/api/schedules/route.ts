@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-function getSupabase(token: string) {
+function isBlockedHost(hostname: string) {\n  const host = hostname.toLowerCase();\n  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".localhost") || host.startsWith("10.") || host.startsWith("192.168.") || /^172\\.(1[6-9]|2\\d|3[0-1])\\./.test(host) || host.startsWith("169.254.");\n}\n\nfunction getSupabase(token: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("Supabase is not configured.");
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!["http:", "https:"].includes(parsedUrl.protocol)) {
       return NextResponse.json({ error: "Only HTTP and HTTPS URLs are supported." }, { status: 400 });
     }
-    if (!Number.isInteger(tableIndex) || tableIndex < 0) {
+    if (isBlockedHost(parsedUrl.hostname)) {\n      return NextResponse.json({ error: "This host is not allowed." }, { status: 400 });\n    }\n    if (!Number.isInteger(tableIndex) || tableIndex < 0) {
       return NextResponse.json({ error: "Invalid table selection." }, { status: 400 });
     }
     if (!cadence) return NextResponse.json({ error: "Choose Daily or Weekly." }, { status: 400 });
