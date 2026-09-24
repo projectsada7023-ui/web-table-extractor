@@ -96,7 +96,10 @@ export default function Home() {
       }
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Extraction failed.");
+      const message = err instanceof Error ? err.message : "Extraction failed.";
+      setError(message.includes("too large or slow") || message.includes("timed out") || message.includes("timeout")
+        ? "The target website is too large or slow to respond. Please try a different URL."
+        : message);
     } finally {
       setLoading(false);
     }
