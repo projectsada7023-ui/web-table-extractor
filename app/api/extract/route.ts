@@ -28,6 +28,12 @@ function getSupabase(accessToken: string) {
   });
 }
 
+function startOfTodayIso() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return start.toISOString();
+}
+
 export async function POST(request: Request) {
   try {
     const authorization = request.headers.get("authorization") ?? "";
@@ -40,6 +46,29 @@ export async function POST(request: Request) {
     const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
     if (userError || !userData.user) {
       return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
+    }
+
+    const { count, error: countError } = await supabase
+      .from("extraction_usage")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userData.user.id)
+      .eq("status", "success")
+      .gte("created_at", startOfTodayIso());
+
+    if (countError) {
+      console.error("Usage limit check failed:", countError.message);
+      return NextResponse.json({ error: "Could not check your daily usage limit." }, { status: 500 });
+    }
+
+    const usedToday = count ?? 0;
+    if (usedToday >= DAILY_LIMIT) {
+      return NextResponse.json({
+        error: "Daily free limit reached. You have used all 3 extractions for today. Your limit resets tomorrow.",
+        code: "DAILY_LIMIT_REACHED",
+        usedToday,
+        dailyLimit: DAILY_LIMIT,
+        remainingToday: 0,
+      }, { status: 429 });
     }
 
     const body = await request.json();
@@ -91,37 +120,24 @@ export async function POST(request: Request) {
     const html = await response.text();
     const tables = extractTables(html);
 
-    const { data: usageData, error: usageError } = await supabase.rpc("record_extraction_usage", {
+    const { error: usageError } = await supabase.rpc("record_extraction_usage", {
       p_source_url: target.toString(),
       p_table_count: tables.length,
     });
 
     if (usageError) {
-      if (usageError.message.toLowerCase().includes("daily_limit_reached")) {
-        return NextResponse.json({
-          error: "Daily free limit reached. You have used all 3 extractions for today. Your limit resets tomorrow.",
-          code: "DAILY_LIMIT_REACHED",
-          usedToday: DAILY_LIMIT,
-          dailyLimit: DAILY_LIMIT,
-          remainingToday: 0,
-        }, { status: 429 });
-      }
-
       console.error("Usage tracking failed:", usageError.message);
       return NextResponse.json({ error: "Extraction succeeded, but usage could not be recorded." }, { status: 500 });
     }
 
-    const usage = Array.isArray(usageData) ? usageData[0] : usageData;
-    const usedToday = Number(usage?.used_today ?? 0);
-    const remainingToday = Number(usage?.remaining_today ?? Math.max(DAILY_LIMIT - usedToday, 0));
-
+    const newUsedToday = usedToday + 1;
     return NextResponse.json({
       url: target.toString(),
       title: extractPageTitle(html),
       tables,
-      usedToday,
+      usedToday: newUsedToday,
       dailyLimit: DAILY_LIMIT,
-      remainingToday,
+      remainingToday: Math.max(DAILY_LIMIT - newUsedToday, 0),
     });
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
