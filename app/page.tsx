@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import AuthPanel from "@/components/AuthPanel";
 import PlanCard from "@/components/PlanCard";
@@ -20,7 +20,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
-  const [guestUsage, setGuestUsage] = useState(0);
+  const [guestUsage, setGuestUsage] = useState(0);\n  const [isAuthenticated, setIsAuthenticated] = useState(false);\n\n  useEffect(() => {\n    const supabase = getSupabaseBrowserClient();\n    supabase.auth.getSession().then(({ data }) => setIsAuthenticated(Boolean(data.session)));\n    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {\n      setIsAuthenticated(Boolean(session));\n    });\n    setGuestUsage(getGuestUsage());\n    return () => listener.subscription.unsubscribe();\n  }, []);
 
   const table = data?.tables[selectedTableIndex] ?? null;
 
