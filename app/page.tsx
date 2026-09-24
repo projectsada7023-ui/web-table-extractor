@@ -312,7 +312,7 @@ export default function Home() {
           <h1>Turn web tables into clean data.</h1>
           <p className="subtitle">
             Paste a public webpage URL. The engine finds HTML tables, extracts their headers and rows,
-            and lets you edit and export the selected table as CSV.
+            and lets you edit and export the selected table as CSV, JSON, and Excel.
           </p>
         </div>
       </section>
