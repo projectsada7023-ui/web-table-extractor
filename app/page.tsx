@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ExcelJS from "exceljs";
 import AuthPanel from "@/components/AuthPanel";
 import PlanCard from "@/components/PlanCard";
@@ -39,6 +39,7 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [cleanMessage, setCleanMessage] = useState("");
+  const extractorControlsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -125,6 +126,9 @@ export default function Home() {
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
       setData(payload);
       setUsageRemaining(payload.remainingToday);
+      requestAnimationFrame(() => {
+        extractorControlsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
       if (!accessToken) {
         const nextGuestUsage = currentGuestUsage + 1;
         window.localStorage.setItem("guest_extractions", String(nextGuestUsage));
@@ -332,7 +336,7 @@ export default function Home() {
       </section>
 
       <section className="container extractor-section">
-        <div className="panel extractor-panel" id="extractor-controls">
+        <div className="panel extractor-panel" id="extractor-controls" ref={extractorControlsRef}>
           <form className="form" onSubmit={extract}>
             <input
               className="input"
