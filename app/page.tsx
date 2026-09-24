@@ -199,7 +199,7 @@ export default function Home() {
     updateSelectedTable((item) => {
       if (operation === "trim") return trimWhitespace(item);
       if (operation === "empty") return removeEmptyRowsAndColumns(item);
-      return formatNumbers(item);
+      return { ...item, ...formatNumbers(item) };
     });
     const labels = { trim: "Whitespace cleaned.", empty: "Empty rows and columns removed.", numbers: "Numbers formatted." };
     setCleanMessage(labels[operation]);
