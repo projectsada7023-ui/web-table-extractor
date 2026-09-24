@@ -75,6 +75,44 @@ function getGuestSupabase() {
   return createClient(url, key);
 }
 
+async function recordGuestUsage(guestId: string) {
+  const supabase = getGuestSupabase();
+  const { data: existing, error: readError } = await supabase
+    .from("guest_extraction_usage")
+    .select("usage_date, extraction_count")
+    .eq("guest_id", guestId)
+    .maybeSingle();
+
+  if (readError) throw readError;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!existing || existing.usage_date !== today) {
+    const { error } = await supabase.from("guest_extraction_usage").upsert({
+      guest_id: guestId,
+      usage_date: today,
+      extraction_count: 1,
+      updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    return 1;
+  }
+
+  if (existing.extraction_count >= DAILY_LIMIT) {
+    throw new Error("Guest daily limit reached");
+  }
+
+  const nextCount = existing.extraction_count + 1;
+  const { error } = await supabase.from("guest_extraction_usage")
+    .update({ extraction_count: nextCount, updated_at: new Date().toISOString() })
+    .eq("guest_id", guestId)
+    .eq("usage_date", today)
+    .eq("extraction_count", existing.extraction_count);
+
+  if (error) throw error;
+  return nextCount;
+}
+
 function startOfTodayIso() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -222,10 +260,13 @@ export async function POST(request: Request) {
         ? rawCookie
         : crypto.randomUUID();
 
-      const guestSupabase = getGuestSupabase();
-      const { data: consumed, error: guestUsageError } = await guestSupabase.rpc("consume_guest_extraction", {
-        p_guest_id: guestId
-      });
+      let consumed: number | null = null;
+      let guestUsageError: Error | null = null;
+      try {
+        consumed = await recordGuestUsage(guestId);
+      } catch (error) {
+        guestUsageError = error instanceof Error ? error : new Error("Guest usage storage failed.");
+      }
 
       if (guestUsageError) {
         if (guestUsageError.message?.includes("Guest daily limit reached")) {
