@@ -13,7 +13,7 @@ const GUEST_COOKIE = "wte_guest_id";
 
 function isBlockedIp(address: string) {
   const ip = address.toLowerCase();
-  const mappedIpv4 = ip.match(/^::ffff:(\\d+\\.\\d+\\.\\d+\\.\\d+)$/);
+  const mappedIpv4 = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mappedIpv4) return isBlockedIp(mappedIpv4[1]);
 
   if (isIP(ip) === 4) {
@@ -45,8 +45,11 @@ function isBlockedIp(address: string) {
 }
 
 function isBlockedHost(hostname: string) {
-  const host = hostname.toLowerCase().replace(/\\.$/, "");
-  return host === "localhost" || host.endsWith(".localhost") || isBlockedIp(host);
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+
+  const hostIpType = isIP(host);
+  return hostIpType !== 0 ? isBlockedIp(host) : false;
 }
 
 async function assertPublicTarget(target: URL) {
