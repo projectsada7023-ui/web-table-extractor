@@ -20,7 +20,18 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
-  const [guestUsage, setGuestUsage] = useState(0);\n  const [isAuthenticated, setIsAuthenticated] = useState(false);\n\n  useEffect(() => {\n    const supabase = getSupabaseBrowserClient();\n    supabase.auth.getSession().then(({ data }) => setIsAuthenticated(Boolean(data.session)));\n    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {\n      setIsAuthenticated(Boolean(session));\n    });\n    setGuestUsage(getGuestUsage());\n    return () => listener.subscription.unsubscribe();\n  }, []);
+  const [guestUsage, setGuestUsage] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data }) => setIsAuthenticated(Boolean(data.session)));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(Boolean(session));
+    });
+    setGuestUsage(getGuestUsage());
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const table = data?.tables[selectedTableIndex] ?? null;
 
