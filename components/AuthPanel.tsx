@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import ProfileSection from "@/components/ProfileSection";
 
 function getClient() {
   try { return getSupabaseBrowserClient(); } catch { return null; }
@@ -23,8 +24,12 @@ export default function AuthPanel() {
     setClient(supabase);
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setUserEmail(session?.user?.email ?? null);
+      if (event === "SIGNED_IN") {
+        setOpen(false);
+        setMessage("");
+      }
     });
     const openAuth = (event: Event) => {
       const requested = (event as CustomEvent<"login" | "signup">).detail;
@@ -89,6 +94,7 @@ export default function AuthPanel() {
                 <span className="account-dot" />
                 <span>{userEmail}</span>
               </span>
+              <ProfileSection />
               <button className="header-ghost" type="button" onClick={logout}>Log out</button>
             </>
           ) : (
