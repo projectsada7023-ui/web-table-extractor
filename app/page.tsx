@@ -21,7 +21,7 @@ type ExtractResponse = {
 
 const SAMPLE_URLS = [
   { label: "Try: Wikipedia Table", url: "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_area" },
-  { label: "Try: Company Earnings Table", url: "https://www.w3schools.com/html/html_tables.asp" },
+  { label: "Try: Company Earnings Table", url: "https://companiesmarketcap.com/apple/earnings/" },
 ];
 
 function escapeCsv(value: string) {
