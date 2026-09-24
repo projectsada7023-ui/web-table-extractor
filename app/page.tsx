@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import AuthPanel from "@/components/AuthPanel";
+import PlanCard from "@/components/PlanCard";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
@@ -281,6 +282,7 @@ export default function Home() {
 
       <section className="container">
         <AuthPanel />
+        <PlanCard />
 
         <div className="panel">
           <form className="form" onSubmit={extract}>
