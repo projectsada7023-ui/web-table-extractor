@@ -197,8 +197,8 @@ export default function Home() {
   function smartClean(operation: "trim" | "empty" | "numbers") {
     if (!table) return;
     updateSelectedTable((item) => {
-      if (operation === "trim") return trimWhitespace(item);
-      if (operation === "empty") return removeEmptyRowsAndColumns(item);
+      if (operation === "trim") return { ...item, ...trimWhitespace(item) };
+      if (operation === "empty") return { ...item, ...removeEmptyRowsAndColumns(item) };
       return { ...item, ...formatNumbers(item) };
     });
     const labels = { trim: "Whitespace cleaned.", empty: "Empty rows and columns removed.", numbers: "Numbers formatted." };
