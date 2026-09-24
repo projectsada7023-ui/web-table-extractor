@@ -4,10 +4,25 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import AuthPanel from "@/components/AuthPanel";
 import PlanCard from "@/components/PlanCard";
+import ScheduleModal from "@/components/ScheduleModal";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { formatNumbers, removeEmptyRowsAndColumns, trimWhitespace } from "@/lib/smart-clean";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
-type ExtractResponse = { url: string; title: string; tables: ExtractedTable[]; usedToday: number; dailyLimit: number | null; remainingToday: number | null; plan: "free" | "pro" };
+type ExtractResponse = {
+  url: string;
+  title: string;
+  tables: ExtractedTable[];
+  usedToday: number;
+  dailyLimit: number | null;
+  remainingToday: number | null;
+  plan: "free" | "pro";
+};
+
+const SAMPLE_URLS = [
+  { label: "Try: Wikipedia Table", url: "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_area" },
+  { label: "Try: Company Earnings Table", url: "https://www.w3schools.com/html/html_tables.asp" },
+];
 
 function escapeCsv(value: string) {
   return '"' + value.replaceAll('"', '""') + '"';
@@ -22,6 +37,8 @@ export default function Home() {
   const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
   const [guestUsage, setGuestUsage] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [cleanMessage, setCleanMessage] = useState("");
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -44,6 +61,16 @@ export default function Home() {
     window.dispatchEvent(new CustomEvent("open-auth", { detail: mode }));
   }
 
+  function updateSelectedTable(updater: (table: ExtractedTable) => ExtractedTable) {
+    setData((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        tables: current.tables.map((item, index) => index === selectedTableIndex ? updater(item) : item),
+      };
+    });
+  }
+
   const csv = useMemo(() => {
     if (!table) return "";
     return [
@@ -52,12 +79,21 @@ export default function Home() {
     ].join("\n");
   }, [table]);
 
-  async function extract(event: FormEvent) {
-    event.preventDefault();
+  const tsv = useMemo(() => {
+    if (!table) return "";
+    return [
+      table.headers.map((value) => value.replace(/\t|\r?\n/g, " ")).join("\t"),
+      ...table.rows.map((row) => row.map((value) => value.replace(/\t|\r?\n/g, " ")).join("\t"))
+    ].join("\n");
+  }, [table]);
+
+  async function extractUrl(targetUrl: string) {
     setError("");
+    setCleanMessage("");
     setData(null);
     setSelectedTableIndex(0);
-    if (!url.trim()) {
+
+    if (!targetUrl.trim()) {
       setError("Enter a webpage URL first.");
       return;
     }
@@ -83,7 +119,7 @@ export default function Home() {
       const response = await fetch("/api/extract", {
         method: "POST",
         headers,
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: targetUrl.trim() }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
@@ -94,105 +130,89 @@ export default function Home() {
         window.localStorage.setItem("guest_extractions", String(nextGuestUsage));
         setGuestUsage(nextGuestUsage);
       }
-
     } catch (err) {
       const message = err instanceof Error ? err.message : "Extraction failed.";
-      setError(message.includes("too large or slow") || message.includes("timed out") || message.includes("timeout")
-        ? "The target website is too large or slow to respond. Please try a different URL."
-        : message);
+      setError(
+        message.includes("too large or slow") || message.includes("timed out") || message.includes("timeout")
+          ? "The target website is too large or slow to respond. Please try a different URL."
+          : message
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  async function extract(event: FormEvent) {
+    event.preventDefault();
+    await extractUrl(url);
+  }
+
+  async function runSample(sampleUrl: string) {
+    setUrl(sampleUrl);
+    await extractUrl(sampleUrl);
+  }
+
   function updateCell(rowIndex: number, columnIndex: number, value: string) {
-    if (!data) return;
-    setData((current) => {
-      if (!current) return current;
-      const tables = current.tables.map((item, tableIndex) => {
-        if (tableIndex !== selectedTableIndex) return item;
-        const rows = item.rows.map((row, index) =>
-          index === rowIndex
-            ? row.map((cell, cellIndex) => cellIndex === columnIndex ? value : cell)
-            : row
-        );
-        return { ...item, rows };
-      });
-      return { ...current, tables };
-    });
+    updateSelectedTable((item) => ({
+      ...item,
+      rows: item.rows.map((row, index) =>
+        index === rowIndex ? row.map((cell, cellIndex) => cellIndex === columnIndex ? value : cell) : row
+      ),
+    }));
   }
 
   function updateHeader(columnIndex: number, value: string) {
-    if (!data) return;
-    setData((current) => {
-      if (!current) return current;
-      const tables = current.tables.map((item, tableIndex) => {
-        if (tableIndex !== selectedTableIndex) return item;
-        const headers = item.headers.map((header, index) => index === columnIndex ? value : header);
-        return { ...item, headers };
-      });
-      return { ...current, tables };
-    });
+    updateSelectedTable((item) => ({
+      ...item,
+      headers: item.headers.map((header, index) => index === columnIndex ? value : header),
+    }));
   }
 
   function addRow() {
-    if (!data || !table) return;
-    setData((current) => {
-      if (!current) return current;
-      const tables = current.tables.map((item, tableIndex) =>
-        tableIndex === selectedTableIndex
-          ? { ...item, rows: [...item.rows, Array(item.headers.length).fill("")] }
-          : item
-      );
-      return { ...current, tables };
-    });
+    if (!table) return;
+    updateSelectedTable((item) => ({ ...item, rows: [...item.rows, Array(item.headers.length).fill("")] }));
   }
 
   function deleteRow(rowIndex: number) {
-    if (!data) return;
-    setData((current) => {
-      if (!current) return current;
-      const tables = current.tables.map((item, tableIndex) =>
-        tableIndex === selectedTableIndex
-          ? { ...item, rows: item.rows.filter((_, index) => index !== rowIndex) }
-          : item
-      );
-      return { ...current, tables };
-    });
+    updateSelectedTable((item) => ({ ...item, rows: item.rows.filter((_, index) => index !== rowIndex) }));
   }
 
   function addColumn() {
-    if (!data) return;
-    setData((current) => {
-      if (!current) return current;
-      const tables = current.tables.map((item, tableIndex) =>
-        tableIndex === selectedTableIndex
-          ? {
-              ...item,
-              headers: [...item.headers, `Column ${item.headers.length + 1}`],
-              rows: item.rows.map((row) => [...row, ""]),
-            }
-          : item
-      );
-      return { ...current, tables };
-    });
+    updateSelectedTable((item) => ({
+      ...item,
+      headers: [...item.headers, `Column ${item.headers.length + 1}`],
+      rows: item.rows.map((row) => [...row, ""]),
+    }));
   }
 
   function deleteColumn(columnIndex: number) {
-    if (!data || !table || table.headers.length <= 1) return;
-    setData((current) => {
-      if (!current) return current;
-      const tables = current.tables.map((item, tableIndex) =>
-        tableIndex === selectedTableIndex
-          ? {
-              ...item,
-              headers: item.headers.filter((_, index) => index !== columnIndex),
-              rows: item.rows.map((row) => row.filter((_, index) => index !== columnIndex)),
-            }
-          : item
-      );
-      return { ...current, tables };
+    if (!table || table.headers.length <= 1) return;
+    updateSelectedTable((item) => ({
+      ...item,
+      headers: item.headers.filter((_, index) => index !== columnIndex),
+      rows: item.rows.map((row) => row.filter((_, index) => index !== columnIndex)),
+    }));
+  }
+
+  function smartClean(operation: "trim" | "empty" | "numbers") {
+    if (!table) return;
+    updateSelectedTable((item) => {
+      if (operation === "trim") return trimWhitespace(item);
+      if (operation === "empty") return removeEmptyRowsAndColumns(item);
+      return formatNumbers(item);
     });
+    const labels = { trim: "Whitespace cleaned.", empty: "Empty rows and columns removed.", numbers: "Numbers formatted." };
+    setCleanMessage(labels[operation]);
+  }
+
+  async function copyToGoogleSheets() {
+    if (!tsv) return;
+    try {
+      await navigator.clipboard.writeText(tsv);
+      setCleanMessage("Copied as TSV. Paste directly into Google Sheets or Excel.");
+    } catch {
+      setError("Could not access the clipboard. Please use Export CSV instead.");
+    }
   }
 
   function downloadJson() {
@@ -211,9 +231,7 @@ export default function Home() {
       rowCount: table.rows.length,
       data: records
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json;charset=utf-8"
-    });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     const href = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = href;
@@ -234,7 +252,6 @@ export default function Home() {
 
   async function downloadExcel() {
     if (!table) return;
-
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Web Table Extractor";
     workbook.created = new Date();
@@ -247,11 +264,7 @@ export default function Home() {
     worksheet.columns = table.headers.map((header, index) => {
       const values = [header, ...table.rows.map((row) => row[index] ?? "")];
       const maxLength = Math.max(...values.map((value) => String(value).length), 10);
-      return {
-        header,
-        key: `column${index}`,
-        width: Math.min(maxLength + 3, 45)
-      };
+      return { header, key: `column${index}`, width: Math.min(maxLength + 3, 45) };
     });
 
     table.rows.forEach((row) => worksheet.addRow(row));
@@ -272,9 +285,7 @@ export default function Home() {
       if (rowNumber === 1) return;
       row.eachCell((cell) => {
         cell.alignment = { vertical: "top", wrapText: true };
-        cell.border = {
-          bottom: { style: "hair", color: { argb: "FFE5E7EB" } }
-        };
+        cell.border = { bottom: { style: "hair", color: { argb: "FFE5E7EB" } } };
         if (rowNumber % 2 === 0) {
           cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
         }
@@ -293,9 +304,7 @@ export default function Home() {
     worksheet.getColumn(1).width = Math.max(worksheet.getColumn(1).width ?? 10, 14);
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    });
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const href = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = href;
@@ -303,6 +312,8 @@ export default function Home() {
     anchor.click();
     URL.revokeObjectURL(href);
   }
+
+  const isPro = data?.plan === "pro";
 
   return (
     <main>
@@ -334,9 +345,35 @@ export default function Home() {
             <button className="primary" disabled={loading} type="submit">
               {loading ? "Extracting..." : "Extract tables"}
             </button>
+            {isAuthenticated && isPro && (
+              <button
+                className="secondary schedule-trigger"
+                disabled={!data || loading}
+                type="button"
+                onClick={() => setScheduleOpen(true)}
+              >
+                Schedule Extraction
+              </button>
+            )}
           </form>
+
+          <div className="sample-actions" aria-label="Sample URLs">
+            <span>Quick start</span>
+            {SAMPLE_URLS.map((sample) => (
+              <button
+                key={sample.label}
+                className="sample-link"
+                type="button"
+                disabled={loading}
+                onClick={() => void runSample(sample.url)}
+              >
+                {sample.label}
+              </button>
+            ))}
+          </div>
+
           {error && <div className="error">{error}</div>}
-          {usageRemaining !== null && !error && isAuthenticated && (
+          {usageRemaining !== null && !error && isAuthenticated && data?.plan === "free" && (
             <div className="usage-banner">Free plan: <strong>{usageRemaining}/3</strong> extractions remaining today.</div>
           )}
           {!isAuthenticated && !error && !data && (
@@ -352,32 +389,30 @@ export default function Home() {
               <div>
                 <h2>{data.title || "Extracted tables"}</h2>
                 <div className="meta">
-                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected · {data.plan === "pro" ? "Pro plan · unlimited daily extractions" : `${data.remainingToday}/3 free extractions remaining today`}
+                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected ·{" "}
+                  {data.plan === "pro" ? "Pro plan · unlimited daily extractions" : `${data.remainingToday}/3 free extractions remaining today`}
                 </div>
               </div>
               <div className="export-actions">
-                <button className="secondary" onClick={downloadCsv} disabled={!table}>
-                  Export CSV
-                </button>
-                <button className="secondary" onClick={downloadJson} disabled={!table}>
-                  Export JSON
-                </button>
-                <button className="primary" onClick={downloadExcel} disabled={!table}>
-                  Export Excel
-                </button>
+                <button className="secondary" onClick={downloadCsv} disabled={!table}>Export CSV</button>
+                <button className="secondary" onClick={downloadJson} disabled={!table}>Export JSON</button>
+                <button className="primary" onClick={downloadExcel} disabled={!table}>Export Excel</button>
+                <button className="secondary" onClick={() => void copyToGoogleSheets()} disabled={!table}>Copy to Google Sheets</button>
               </div>
             </div>
 
             {data.tables.length > 0 && (
-              <div className="table-selector">
+              <div className="table-selector table-tabs" role="tablist" aria-label="Extracted tables">
                 {data.tables.map((item, index) => (
                   <button
                     key={item.index}
                     className={index === selectedTableIndex ? "table-tab active" : "table-tab"}
-                    onClick={() => setSelectedTableIndex(index)}
+                    onClick={() => { setSelectedTableIndex(index); setCleanMessage(""); }}
                     type="button"
+                    role="tab"
+                    aria-selected={index === selectedTableIndex}
                   >
-                    Table {index + 1}
+                    <span className="table-tab-title">Table {index + 1}</span>
                     <span>{item.rows.length} rows</span>
                   </button>
                 ))}
@@ -386,6 +421,20 @@ export default function Home() {
 
             {table ? (
               <>
+                <div className="smart-clean-toolbar">
+                  <div>
+                    <strong>Smart Clean</strong>
+                    <span>Clean the selected table before export.</span>
+                  </div>
+                  <div className="smart-clean-actions">
+                    <button className="secondary" onClick={() => smartClean("trim")} type="button">Trim Whitespace</button>
+                    <button className="secondary" onClick={() => smartClean("empty")} type="button">Remove Empty Rows/Cols</button>
+                    <button className="secondary" onClick={() => smartClean("numbers")} type="button">Format Numbers</button>
+                  </div>
+                </div>
+
+                {cleanMessage && <div className="clean-message">{cleanMessage}</div>}
+
                 <div className="editor-toolbar">
                   <span>Edit cells directly in the table.</span>
                   <div className="toolbar-actions">
@@ -399,7 +448,7 @@ export default function Home() {
                     <thead>
                       <tr>
                         {table.headers.map((header, columnIndex) => (
-                          <th key={columnIndex}>
+                          <th key={columnIndex} className={columnIndex === 0 ? "sticky-first-column" : ""}>
                             <div className="header-editor">
                               <input
                                 value={header}
@@ -425,7 +474,7 @@ export default function Home() {
                       {table.rows.map((row, rowIndex) => (
                         <tr key={rowIndex}>
                           {table.headers.map((_, columnIndex) => (
-                            <td key={columnIndex}>
+                            <td key={columnIndex} className={columnIndex === 0 ? "sticky-first-column" : ""}>
                               <input
                                 value={row[columnIndex] ?? ""}
                                 onChange={(event) => updateCell(rowIndex, columnIndex, event.target.value)}
@@ -434,12 +483,7 @@ export default function Home() {
                             </td>
                           ))}
                           <td className="row-action">
-                            <button
-                              className="delete-row"
-                              onClick={() => deleteRow(rowIndex)}
-                              title={`Delete row ${rowIndex + 1}`}
-                              type="button"
-                            >
+                            <button className="delete-row" onClick={() => deleteRow(rowIndex)} title={`Delete row ${rowIndex + 1}`} type="button">
                               Delete
                             </button>
                           </td>
@@ -449,9 +493,7 @@ export default function Home() {
                   </table>
                 </div>
 
-                {table.rows.length === 0 && (
-                  <div className="panel empty">No rows remain. Use + Row to add one.</div>
-                )}
+                {table.rows.length === 0 && <div className="panel empty">No rows remain. Use + Row to add one.</div>}
               </>
             ) : (
               <div className="panel empty">No HTML tables were found on this page.</div>
@@ -459,6 +501,15 @@ export default function Home() {
           </section>
         )}
       </section>
+
+      {isAuthenticated && isPro && data && (
+        <ScheduleModal
+          open={scheduleOpen}
+          onClose={() => setScheduleOpen(false)}
+          sourceUrl={data.url}
+          tableIndex={selectedTableIndex}
+        />
+      )}
     </main>
   );
 }
