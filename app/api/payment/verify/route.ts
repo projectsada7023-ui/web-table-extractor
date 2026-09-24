@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     const service = getServiceSupabase();
     const { error } = await service.from("profiles").update({
-      plan: "pro", plan_status: "active", razorpay_subscription_id: subscriptionId, updated_at: new Date().toISOString()
+      plan: "pro", plan_status: "active", razorpay_subscription_id: subscriptionId, plan_started_at: new Date().toISOString(), plan_amount: 19900, updated_at: new Date().toISOString()
     }).eq("user_id", userData.user.id);
     if (error) return NextResponse.json({ error: "Payment verified, but your Pro plan could not be activated automatically." }, { status: 500 });
 
