@@ -7,7 +7,7 @@ import PlanCard from "@/components/PlanCard";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type ExtractedTable = { index: number; headers: string[]; rows: string[][] };
-type ExtractResponse = { url: string; title: string; tables: ExtractedTable[]; usedToday: number; dailyLimit: number; remainingToday: number };
+type ExtractResponse = { url: string; title: string; tables: ExtractedTable[]; usedToday: number; dailyLimit: number | null; remainingToday: number | null; plan: "free" | "pro" };
 
 function escapeCsv(value: string) {
   return '"' + value.replaceAll('"', '""') + '"';
@@ -310,7 +310,7 @@ export default function Home() {
               <div>
                 <h2>{data.title || "Extracted tables"}</h2>
                 <div className="meta">
-                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected · {data.remainingToday}/{data.dailyLimit} extractions remaining today
+                  {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected · {data.plan === "pro" ? "Pro plan · unlimited daily extractions" : `${data.remainingToday}/3 free extractions remaining today`}
                 </div>
               </div>
               <div className="export-actions">
