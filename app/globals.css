@@ -76,3 +76,65 @@ main{min-height:100vh}.site-header{position:fixed;left:0;right:0;top:0}.hero{pad
 .profile-details div{padding:12px;border:1px solid var(--border);border-radius:11px;background:rgba(15,23,42,.55)}
 .profile-details span{display:block;color:#64748b;font-size:11px;margin-bottom:5px}.profile-details strong{display:block;color:#e2e8f0;font-size:13px}
 @media(max-width:700px){.table-wrap{height:420px}.profile-button{height:35px;padding:0 10px}.plan-status-compact{flex-wrap:wrap}.profile-modal{padding:24px 20px}.profile-details{grid-template-columns:1fr}}
+
+
+/* Production extractor controls */
+.sample-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 2px 0;color:#64748b;font-size:11px}
+.sample-link{border:0;background:transparent;color:#a5b4fc;padding:5px 7px;border-radius:8px;font-size:12px;font-weight:700}
+.sample-link:hover:not(:disabled){background:rgba(99,102,241,.09);color:#c7d2fe}
+.sample-link:disabled{opacity:.45;cursor:wait}
+.schedule-trigger{white-space:nowrap}
+.table-tabs{display:flex;align-items:flex-end;gap:4px;margin:18px 0 0;padding:0 6px;border-bottom:1px solid var(--border)}
+.table-tabs .table-tab{position:relative;min-width:105px;border:0;border-bottom:2px solid transparent;border-radius:10px 10px 0 0;background:transparent;padding:10px 13px;color:#94a3b8}
+.table-tabs .table-tab:hover{background:rgba(148,163,184,.05);color:#e2e8f0}
+.table-tabs .table-tab.active{border-bottom-color:#818cf8;background:rgba(99,102,241,.08);color:#fff;box-shadow:none}
+.table-tab-title{font-size:13px;font-weight:800}
+.smart-clean-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:16px 0 10px;padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:rgba(15,23,42,.62)}
+.smart-clean-toolbar>div:first-child{display:flex;flex-direction:column;gap:3px}
+.smart-clean-toolbar strong{font-size:13px;color:#e2e8f0}
+.smart-clean-toolbar span{font-size:11px;color:#64748b}
+.smart-clean-actions{display:flex;gap:7px;flex-wrap:wrap}
+.smart-clean-actions .secondary{min-height:34px;padding:0 11px;font-size:11px}
+.clean-message{margin:0 0 10px;padding:8px 11px;border-radius:9px;border:1px solid rgba(52,211,153,.18);background:rgba(16,185,129,.07);color:#a7f3d0;font-size:12px}
+.table-wrap table{font-size:14px}
+.table-wrap th,.table-wrap td{padding:6px 12px;border-right:1px solid rgba(148,163,184,.07);border-bottom:1px solid rgba(148,163,184,.13)}
+.table-wrap th:last-child,.table-wrap td:last-child{border-right:0}
+.table-wrap .sticky-first-column{position:sticky;left:0;z-index:6;background:#0c1424}
+.table-wrap th.sticky-first-column{z-index:20;background:#1a2940}
+.table-wrap tbody tr:nth-child(even) .sticky-first-column{background:#101a2b}
+.table-wrap tbody tr:nth-child(odd) .sticky-first-column{background:#0c1424}
+.table-wrap tbody tr:hover .sticky-first-column{background:#17233a}
+.table-wrap td.sticky-first-column input,.table-wrap th.sticky-first-column input{background:transparent}
+.table-wrap td.sticky-first-column input:focus,.table-wrap th.sticky-first-column input:focus{background:#17233a}
+.table-wrap thead th{box-shadow:0 1px 0 rgba(148,163,184,.16)}
+.pricing-modal,.schedule-modal{position:relative;width:min(680px,100%);max-height:90vh;overflow-y:auto;padding:30px;border:1px solid rgba(148,163,184,.2);border-radius:24px;background:linear-gradient(180deg,#111827,#0b1120);box-shadow:0 30px 100px rgba(0,0,0,.58)}
+.pricing-modal h2,.schedule-modal h2{margin:8px 0 7px;font-size:28px;letter-spacing:-.04em}
+.pricing-modal>.meta,.schedule-modal>.meta{margin:0 0 20px}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 14px}
+.pricing-tier{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid var(--border);border-radius:14px;background:rgba(15,23,42,.55)}
+.pricing-tier.featured{border-color:rgba(129,140,248,.5);background:linear-gradient(145deg,rgba(99,102,241,.14),rgba(15,23,42,.7))}
+.pricing-kicker{color:#94a3b8;font-size:10px;font-weight:800;letter-spacing:.12em}
+.pricing-tier strong{font-size:24px;letter-spacing:-.03em}.pricing-tier strong span{font-size:12px;color:#94a3b8;margin-left:3px}.pricing-tier>span:last-child{color:#94a3b8;font-size:12px}
+.pricing-comparison{overflow:hidden;border:1px solid var(--border);border-radius:14px}
+.pricing-comparison-head,.pricing-row{display:grid;grid-template-columns:1.5fr .65fr .65fr;gap:10px;padding:10px 12px;font-size:12px}
+.pricing-comparison-head{background:rgba(30,41,59,.72);color:#cbd5e1;font-weight:800}
+.pricing-row{border-top:1px solid rgba(148,163,184,.08);color:#94a3b8}.pricing-row span:nth-child(2),.pricing-row span:nth-child(3){text-align:center}.pricing-row span:nth-child(3){color:#c7d2fe}
+.pricing-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.pricing-actions .primary{min-width:230px}
+.schedule-form{display:grid;gap:8px;margin-top:18px}.schedule-form label{color:#cbd5e1;font-size:12px;font-weight:700}
+.schedule-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.schedule-option{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:13px;border:1px solid var(--border);border-radius:12px;background:rgba(15,23,42,.55);color:#cbd5e1;text-align:left}
+.schedule-option span{font-size:11px;color:#64748b}.schedule-option.active{border-color:rgba(129,140,248,.6);background:rgba(99,102,241,.1);box-shadow:inset 0 0 0 1px rgba(129,140,248,.08)}
+.schedule-source{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(2,6,23,.45);color:#64748b;font-size:11px;word-break:break-all;margin:3px 0 8px}
+@media(max-width:700px){
+  .sample-actions{align-items:flex-start;flex-direction:column;gap:4px}
+  .sample-link{padding-left:0}
+  .table-tabs{overflow-x:auto}
+  .table-tabs .table-tab{flex:0 0 auto}
+  .smart-clean-toolbar{align-items:flex-start;flex-direction:column}
+  .smart-clean-actions{width:100%}
+  .smart-clean-actions .secondary{flex:1}
+  .pricing-modal,.schedule-modal{padding:24px 20px;border-radius:20px}
+  .pricing-grid,.schedule-options{grid-template-columns:1fr}
+  .pricing-actions{flex-direction:column}
+  .pricing-actions button{width:100%}
+}
