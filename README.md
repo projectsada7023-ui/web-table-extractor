@@ -72,3 +72,34 @@ The production quota SQL is stored at:
 `supabase/migrations/202609240001_production_daily_quota.sql`
 
 Run that SQL once in the Supabase SQL Editor after pulling the latest project code.
+
+
+## Product UI upgrades
+
+The dashboard now includes:
+
+- top-positioned URL extraction with Wikipedia and company earnings demo shortcuts
+- tabbed table switching for multi-table pages
+- high-density spreadsheet-style preview with sticky header and first column
+- Smart Clean tools for whitespace, empty rows/columns, and numeric normalization
+- CSV, JSON, Excel, and copy-ready TSV for Google Sheets
+- Pro-only scheduled extraction UI and comparison pricing modal
+
+## Scheduled extraction setup
+
+Scheduled extraction uses a Supabase table plus a daily Vercel Cron worker.
+
+Run this migration once in the Supabase SQL Editor:
+
+`supabase/migrations/202609240004_extraction_schedules.sql`
+
+Add these server-only Vercel environment variables:
+
+- `CRON_SECRET` — a long random secret used to protect the cron route
+- `RESEND_API_KEY` — Resend API key for transactional email
+- `RESEND_FROM_EMAIL` — verified sender address
+
+The schedule worker is registered in `vercel.json` and runs daily. It checks which daily/weekly Pro schedules are due, re-extracts the selected table, and emails a CSV snapshot.
+
+Never prefix these secrets with `NEXT_PUBLIC_`.
+
