@@ -47,6 +47,15 @@ export default function Home() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(Boolean(session));
     });
+
+    const handleAuthSignedIn = () => {
+      const pendingUrl = window.sessionStorage.getItem("pending_extraction_url");
+      if (!pendingUrl) return;
+      window.sessionStorage.removeItem("pending_extraction_url");
+      setUrl(pendingUrl);
+      void extractUrl(pendingUrl);
+    };
+    window.addEventListener("auth-signed-in", handleAuthSignedIn);
     setGuestUsage(getGuestUsage());
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -118,6 +127,8 @@ export default function Home() {
       if (!response.ok) {
         if (payload.code === "GUEST_LIMIT_REACHED") {
           setLoading(false);
+          setGuestUsage(3);
+          window.sessionStorage.setItem("pending_extraction_url", targetUrl.trim());
           setError("You've used your 3 free guest extractions. Create a free account to continue.");
           openAuth("signup");
           return;
@@ -126,6 +137,9 @@ export default function Home() {
       }
       setData(payload);
       setUsageRemaining(payload.remainingToday);
+      if (accessToken) {
+        window.sessionStorage.removeItem("pending_extraction_url");
+      }
       requestAnimationFrame(() => {
         extractorControlsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
