@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { extractPageTitle, extractTables } from "@/lib/extractor";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 const DAILY_LIMIT = 3;
 
 function isBlockedHost(hostname: string) {
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This host is not allowed." }, { status: 400 });
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     let response: Response;
     try {
       response = await fetch(target, {
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
-      ? "The target page took too long to respond."
+      ? "The target website is too large or slow to respond. Please try a different URL."
       : error instanceof Error && error.message === "Supabase is not configured."
         ? error.message : "Could not fetch or parse the target page.";
     return NextResponse.json({ error: message }, { status: 500 });
