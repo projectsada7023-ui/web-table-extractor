@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { lookup } from "node:dns/promises";
-import { BlockList, isIP } from "node:net";
+import { isIP } from "node:net";
 import { createClient } from "@supabase/supabase-js";
 import { extractPageTitle, extractTables } from "@/lib/extractor";
 
@@ -9,6 +9,7 @@ export const maxDuration = 60;
 const DAILY_LIMIT = 3;
 
 const MAX_REDIRECTS = 5;
+const GUEST_COOKIE = "wte_guest_id";
 
 function isBlockedIp(address: string) {
   const ip = address.toLowerCase();
@@ -64,6 +65,13 @@ function getSupabase(token: string) {
   return createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } } });
 }
 
+function getServiceSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Supabase is not configured.");
+  return createClient(url, key);
+}
+
 function startOfTodayIso() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -101,14 +109,7 @@ export async function POST(request: Request) {
         }, { status: 429 });
       }
     } else {
-      const guestUsed = Number(request.headers.get("x-guest-extractions") ?? "0");
-      if (guestUsed >= DAILY_LIMIT) {
-        return NextResponse.json({
-          error: "You've used your 3 free guest extractions. Create a free account to continue.",
-          code: "GUEST_LIMIT_REACHED", plan: "free", usedToday: DAILY_LIMIT, dailyLimit: DAILY_LIMIT, remainingToday: 0
-        }, { status: 429 });
-      }
-      usedToday = guestUsed;
+      usedToday = 0;
     }
 
     const body = await request.json();
@@ -187,6 +188,7 @@ export async function POST(request: Request) {
 
     const html = await response.text();
     const tables = extractTables(html);
+
     if (supabase) {
       const { error: usageError } = await supabase.rpc("record_extraction_usage", {
         p_source_url: finalUrl.toString(), p_table_count: tables.length
@@ -194,13 +196,57 @@ export async function POST(request: Request) {
       if (usageError) return NextResponse.json({ error: "Extraction succeeded, but usage could not be recorded." }, { status: 500 });
     }
 
-    const newUsedToday = usedToday + 1;
-    return NextResponse.json({
+    let newUsedToday = usedToday + 1;
+    const result = NextResponse.json({
       url: finalUrl.toString(), title: extractPageTitle(html), tables, plan,
       usedToday: newUsedToday,
       dailyLimit: plan === "pro" ? null : DAILY_LIMIT,
       remainingToday: plan === "pro" ? null : Math.max(DAILY_LIMIT - newUsedToday, 0)
     });
+
+    if (isGuest) {
+      const existingGuestId = request.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${GUEST_COOKIE}=([^;]+)`))?.[1];
+      const guestId = existingGuestId ?? crypto.randomUUID();
+      const guestSupabase = getServiceSupabase();
+      const { data: consumed, error: guestUsageError } = await guestSupabase.rpc("consume_guest_extraction", {
+        p_guest_id: guestId
+      });
+
+      if (guestUsageError) {
+        if (guestUsageError.message?.includes("Guest daily limit reached")) {
+          return NextResponse.json({
+            error: "You've used your 3 free guest extractions. Create a free account to continue.",
+            code: "GUEST_LIMIT_REACHED",
+            plan: "free",
+            usedToday: DAILY_LIMIT,
+            dailyLimit: DAILY_LIMIT,
+            remainingToday: 0
+          }, { status: 429 });
+        }
+        return NextResponse.json({ error: "Could not record your guest usage." }, { status: 500 });
+      }
+
+      newUsedToday = Number(consumed ?? 0);
+      result.cookies.set({
+        name: GUEST_COOKIE,
+        value: guestId,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365
+      });
+
+      const finalPayload = {
+        url: finalUrl.toString(), title: extractPageTitle(html), tables, plan,
+        usedToday: newUsedToday,
+        dailyLimit: DAILY_LIMIT,
+        remainingToday: Math.max(DAILY_LIMIT - newUsedToday, 0)
+      };
+      return NextResponse.json(finalPayload, { headers: result.headers });
+    }
+
+    return result;
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "The target website is too large or slow to respond. Please try a different URL."
