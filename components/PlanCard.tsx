@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import PricingModal from "@/components/PricingModal";
 
 declare global {
   interface Window {
@@ -13,6 +14,7 @@ export default function PlanCard() {
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -71,6 +73,7 @@ export default function PlanCard() {
           const verifyPayload = await verifyResponse.json();
           if (!verifyResponse.ok) throw new Error(verifyPayload.error ?? "Payment verification failed.");
           setPlan("pro");
+          setPricingOpen(false);
           setMessage("Payment verified. Your Pro plan is now active.");
         },
       });
@@ -83,27 +86,30 @@ export default function PlanCard() {
   }
 
   return (
-    <div className={plan === "pro" ? "plan-status-compact" : "panel plan-card"}>
-      {plan === "pro" ? (
-        <>
-          <span className="plan-status-dot" />
-          <strong>Pro plan</strong>
-          <span>Unlimited extractions</span>
-          {message && <span>{message}</span>}
-        </>
-      ) : (
-        <>
-          <div>
-            <div className="eyebrow">Your plan</div>
-            <h2>Free plan</h2>
-            <p className="meta">3 successful extractions per day.</p>
-            {message && <p className="meta">{message}</p>}
-          </div>
-          <button className="secondary" type="button" onClick={upgrade} disabled={loading}>
-            {loading ? "Opening payment..." : "Upgrade to Pro — ₹199/month"}
-          </button>
-        </>
-      )}
-    </div>
+    <>
+      <div className={plan === "pro" ? "plan-status-compact" : "panel plan-card"}>
+        {plan === "pro" ? (
+          <>
+            <span className="plan-status-dot" />
+            <strong>Pro plan</strong>
+            <span>Unlimited extractions</span>
+            {message && <span>{message}</span>}
+          </>
+        ) : (
+          <>
+            <div>
+              <div className="eyebrow">Your plan</div>
+              <h2>Free plan</h2>
+              <p className="meta">3 successful extractions per day.</p>
+              {message && <p className="meta">{message}</p>}
+            </div>
+            <button className="secondary" type="button" onClick={() => setPricingOpen(true)} disabled={loading}>
+              Upgrade to Pro — ₹199/month
+            </button>
+          </>
+        )}
+      </div>
+      <PricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} onUpgrade={upgrade} loading={loading} />
+    </>
   );
 }
