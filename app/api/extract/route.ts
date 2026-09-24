@@ -243,7 +243,16 @@ export async function POST(request: Request) {
         dailyLimit: DAILY_LIMIT,
         remainingToday: Math.max(DAILY_LIMIT - newUsedToday, 0)
       };
-      return NextResponse.json(finalPayload, { headers: result.headers });
+      result.cookies.set({
+        name: GUEST_COOKIE,
+        value: guestId,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365
+      });
+      return result;
     }
 
     return result;
