@@ -25,7 +25,9 @@ export default function PlanCard() {
       const { data } = await supabase.from("profiles").select("plan").eq("user_id", sessionData.session.user.id).maybeSingle();
       if (active && data?.plan === "pro") setPlan("pro");
     };
-    const openPricing = () => setPricingOpen(true);\n    window.addEventListener("open-pricing", openPricing);\n    void loadPlan();
+    const openPricing = () => setPricingOpen(true);
+    window.addEventListener("open-pricing", openPricing);
+    void loadPlan();
     return () => { active = false; window.removeEventListener("open-pricing", openPricing); };
   }, []);
 
