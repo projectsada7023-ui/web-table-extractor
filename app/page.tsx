@@ -106,16 +106,8 @@ export default function Home() {
       const accessToken = sessionData.session?.access_token;
       const currentGuestUsage = getGuestUsage();
 
-      if (!accessToken && currentGuestUsage >= 3) {
-        setLoading(false);
-        setError("You've used your 3 free guest extractions. Create a free account to continue.");
-        openAuth("signup");
-        return;
-      }
-
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-      else headers["x-guest-extractions"] = String(currentGuestUsage);
 
       const response = await fetch("/api/extract", {
         method: "POST",
@@ -123,7 +115,15 @@ export default function Home() {
         body: JSON.stringify({ url: targetUrl.trim() }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
+      if (!response.ok) {
+        if (payload.code === "GUEST_LIMIT_REACHED") {
+          setLoading(false);
+          setError("You've used your 3 free guest extractions. Create a free account to continue.");
+          openAuth("signup");
+          return;
+        }
+        throw new Error(payload.error ?? "Extraction failed.");
+      }
       setData(payload);
       setUsageRemaining(payload.remainingToday);
       requestAnimationFrame(() => {
