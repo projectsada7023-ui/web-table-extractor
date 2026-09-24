@@ -20,8 +20,18 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
+  const [guestUsage, setGuestUsage] = useState(0);
 
   const table = data?.tables[selectedTableIndex] ?? null;
+
+  function getGuestUsage() {
+    if (typeof window === "undefined") return 0;
+    return Number(window.localStorage.getItem("guest_extractions") ?? "0");
+  }
+
+  function openAuth(mode: "login" | "signup" = "signup") {
+    window.dispatchEvent(new CustomEvent("open-auth", { detail: mode }));
+  }
 
   const csv = useMemo(() => {
     if (!table) return "";
@@ -46,20 +56,33 @@ export default function Home() {
       const supabase = getSupabaseBrowserClient();
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
-      if (!accessToken) throw new Error("Please sign in before extracting.");
+      const currentGuestUsage = getGuestUsage();
+
+      if (!accessToken && currentGuestUsage >= 3) {
+        setLoading(false);
+        setError("You've used your 3 free guest extractions. Create a free account to continue.");
+        openAuth("signup");
+        return;
+      }
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+      else headers["x-guest-extractions"] = String(currentGuestUsage);
 
       const response = await fetch("/api/extract", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers,
         body: JSON.stringify({ url: url.trim() }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Extraction failed.");
       setData(payload);
       setUsageRemaining(payload.remainingToday);
+      if (!accessToken) {
+        const nextGuestUsage = currentGuestUsage + 1;
+        window.localStorage.setItem("guest_extractions", String(nextGuestUsage));
+        setGuestUsage(nextGuestUsage);
+      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Extraction failed.");
@@ -271,7 +294,14 @@ export default function Home() {
     <main>
       <section className="hero">
         <div className="container">
-          <div className="eyebrow">Autonomous Web Data Extractor</div>
+          <div className="hero-topline">
+            <div className="eyebrow">Autonomous Web Data Extractor</div>
+            {!data && guestUsage > 0 && guestUsage < 3 && (
+              <button className="guest-counter" type="button" onClick={() => openAuth("signup")}>
+                {3 - guestUsage} guest extraction{3 - guestUsage === 1 ? "" : "s"} left · Sign up free
+              </button>
+            )}
+          </div>
           <h1>Turn web tables into clean data.</h1>
           <p className="subtitle">
             Paste a public webpage URL. The engine finds HTML tables, extracts their headers and rows,
@@ -281,7 +311,6 @@ export default function Home() {
       </section>
 
       <section className="container">
-        <AuthPanel />
         <PlanCard />
 
         <div className="panel">
@@ -301,6 +330,9 @@ export default function Home() {
           {error && <div className="error">{error}</div>}
           {usageRemaining !== null && !error && (
             <div className="usage-banner">Free plan: <strong>{usageRemaining}/3</strong> extractions remaining today.</div>
+          )}
+          {!error && !data && guestUsage > 0 && guestUsage < 3 && (
+            <div className="guest-hint">Guest mode: <strong>{guestUsage}/3</strong> free extractions used. <button type="button" onClick={() => openAuth("signup")}>Create a free account</button> to keep your history and daily quota synced.</div>
           )}
         </div>
 
