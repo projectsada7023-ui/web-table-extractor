@@ -29,6 +29,7 @@ export default function AuthPanel() {
       if (event === "SIGNED_IN") {
         setOpen(false);
         setMessage("");
+        window.dispatchEvent(new CustomEvent("auth-signed-in"));
       }
     });
     const openAuth = (event: Event) => {
