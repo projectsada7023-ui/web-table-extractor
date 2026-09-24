@@ -332,7 +332,7 @@ export default function Home() {
       </section>
 
       <section className="container extractor-section">
-        <div className="panel extractor-panel">
+        <div className="panel extractor-panel" id="extractor-controls">
           <form className="form" onSubmit={extract}>
             <input
               className="input"
