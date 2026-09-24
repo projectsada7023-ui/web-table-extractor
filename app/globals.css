@@ -60,3 +60,19 @@ main{min-height:100vh}.site-header{position:fixed;left:0;right:0;top:0}.hero{pad
 @media(max-width:700px){
   .guest-plan-note{margin-top:9px;font-size:11px}
 }
+
+
+.profile-button{height:36px;padding:0 13px;border:1px solid var(--border-strong);border-radius:10px;background:rgba(30,41,59,.68);color:#cbd5e1;font-size:12px;font-weight:750}
+.profile-button:hover{background:rgba(51,65,85,.75);color:#fff}
+.plan-status-compact{width:min(900px,100%);display:flex;align-items:center;justify-content:center;gap:9px;margin-top:10px;padding:8px 14px;color:#94a3b8;font-size:12px}
+.plan-status-compact strong{color:#e2e8f0}.plan-status-compact span:last-child{color:#a5b4fc}
+.plan-status-dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.1)}
+.profile-modal-backdrop{position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:20px;background:rgba(2,6,23,.7);backdrop-filter:blur(10px)}
+.profile-modal{position:relative;width:min(500px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px;border:1px solid rgba(148,163,184,.2);border-radius:22px;background:linear-gradient(180deg,#111827,#0b1120);box-shadow:0 30px 100px rgba(0,0,0,.58)}
+.profile-modal h2{margin:8px 0 6px;font-size:28px;letter-spacing:-.04em}.profile-modal>p{margin:0 0 20px}
+.profile-form{display:grid;gap:8px;margin-top:20px}.profile-form label{color:#cbd5e1;font-size:12px;font-weight:700}.profile-form .input{width:100%;margin-bottom:7px}.profile-form .primary{height:46px;margin-top:4px}
+.profile-readonly{opacity:.72}
+.profile-details{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)}
+.profile-details div{padding:12px;border:1px solid var(--border);border-radius:11px;background:rgba(15,23,42,.55)}
+.profile-details span{display:block;color:#64748b;font-size:11px;margin-bottom:5px}.profile-details strong{display:block;color:#e2e8f0;font-size:13px}
+@media(max-width:700px){.profile-button{height:35px;padding:0 10px}.plan-status-compact{flex-wrap:wrap}.profile-modal{padding:24px 20px}.profile-details{grid-template-columns:1fr}}
