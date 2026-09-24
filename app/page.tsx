@@ -57,7 +57,18 @@ export default function Home() {
     };
     window.addEventListener("auth-signed-in", handleAuthSignedIn);
     setGuestUsage(getGuestUsage());
-    return () => listener.subscription.unsubscribe();
+    const handleSignedIn = () => {
+      setError("");
+      setUsageRemaining(null);
+      requestAnimationFrame(() => {
+        extractorControlsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    };
+    window.addEventListener("auth-signed-in", handleSignedIn);
+    return () => {
+      listener.subscription.unsubscribe();
+      window.removeEventListener("auth-signed-in", handleSignedIn);
+    };
   }, []);
 
   const table = data?.tables[selectedTableIndex] ?? null;
@@ -129,7 +140,7 @@ export default function Home() {
           setLoading(false);
           setGuestUsage(3);
           window.sessionStorage.setItem("pending_extraction_url", targetUrl.trim());
-          setError("You've used your 3 free guest extractions. Create a free account to continue.");
+          setError("");
           openAuth("signup");
           return;
         }
@@ -395,7 +406,10 @@ export default function Home() {
             <div className="usage-banner">Free plan: <strong>{usageRemaining}/3</strong> extractions remaining today.</div>
           )}
           {!isAuthenticated && !error && !data && (
-            <div className="guest-plan-note">Free plan: 3 successful extractions per day.</div>
+            <div className="guest-plan-note">
+            Free plan: 3 successful extractions per day.
+            <button type="button" onClick={() => openAuth("signup")}>Create a free account</button>
+          </div>
           )}
         </div>
 
