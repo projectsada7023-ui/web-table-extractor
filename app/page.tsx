@@ -427,9 +427,9 @@ export default function Home() {
                     <span>Clean the selected table before export.</span>
                   </div>
                   <div className="smart-clean-actions">
-                    <button className="secondary" onClick={() => smartClean("trim")} type="button">Trim Whitespace</button>
-                    <button className="secondary" onClick={() => smartClean("empty")} type="button">Remove Empty Rows/Cols</button>
-                    <button className="secondary" onClick={() => smartClean("numbers")} type="button">Format Numbers</button>
+                    <button className="secondary" onClick={() => isPro ? smartClean("trim") : window.dispatchEvent(new CustomEvent("open-pricing"))} type="button">Trim Whitespace{!isPro && " · Pro"}</button>
+                    <button className="secondary" onClick={() => isPro ? smartClean("empty") : window.dispatchEvent(new CustomEvent("open-pricing"))} type="button">Remove Empty Rows/Cols{!isPro && " · Pro"}</button>
+                    <button className="secondary" onClick={() => isPro ? smartClean("numbers") : window.dispatchEvent(new CustomEvent("open-pricing"))} type="button">Format Numbers{!isPro && " · Pro"}</button>
                   </div>
                 </div>
 
