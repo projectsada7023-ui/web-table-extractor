@@ -395,8 +395,8 @@ export default function Home() {
               </div>
               <div className="export-actions">
                 <button className="secondary" onClick={downloadCsv} disabled={!table}>Export CSV</button>
-                <button className="secondary" onClick={downloadJson} disabled={!table}>Export JSON</button>
-                <button className="primary" onClick={downloadExcel} disabled={!table}>Export Excel</button>
+                <button className="secondary" onClick={() => { if (isPro) downloadJson(); else window.dispatchEvent(new CustomEvent("open-pricing")); }} disabled={!table}>Export JSON{!isPro && " · Pro"}</button>
+                <button className="primary" onClick={() => { if (isPro) void downloadExcel(); else window.dispatchEvent(new CustomEvent("open-pricing")); }} disabled={!table}>Export Excel{!isPro && " · Pro"}</button>
                 <button className="secondary" onClick={() => void copyToGoogleSheets()} disabled={!table}>Copy to Google Sheets</button>
               </div>
             </div>
