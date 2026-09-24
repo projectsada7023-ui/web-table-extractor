@@ -42,10 +42,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      if (!supabaseUrl || !supabaseKey) throw new Error("Supabase is not configured.");
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = getSupabaseBrowserClient();
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error("Please sign in before extracting.");
