@@ -336,7 +336,7 @@ export default function Home() {
           )}
         </div>
 
-        {data && (
+        <PlanCard />\n\n        {data && (
           <section className="results">
             <div className="result-header">
               <div>
