@@ -321,10 +321,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="container">
-        <PlanCard />
-
-        <div className="panel">
+      <section className="container extractor-section">
+        <div className="panel extractor-panel">
           <form className="form" onSubmit={extract}>
             <input
               className="input"
@@ -339,15 +337,17 @@ export default function Home() {
             </button>
           </form>
           {error && <div className="error">{error}</div>}
-          {usageRemaining !== null && !error && (
+          {usageRemaining !== null && !error && isAuthenticated && (
             <div className="usage-banner">Free plan: <strong>{usageRemaining}/3</strong> extractions remaining today.</div>
           )}
-          {!error && !data && guestUsage > 0 && guestUsage < 3 && (
-            <div className="guest-hint">Guest mode: <strong>{guestUsage}/3</strong> free extractions used. <button type="button" onClick={() => openAuth("signup")}>Create a free account</button> to keep your history and daily quota synced.</div>
+          {!isAuthenticated && !error && !data && (
+            <div className="guest-plan-note">Free plan: 3 successful extractions per day.</div>
           )}
         </div>
 
-        <PlanCard />\n\n        {data && (
+        {isAuthenticated && <PlanCard />}
+
+        {data && (
           <section className="results">
             <div className="result-header">
               <div>
