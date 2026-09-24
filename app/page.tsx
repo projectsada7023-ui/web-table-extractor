@@ -303,15 +303,11 @@ export default function Home() {
 
   return (
     <main>
+      <AuthPanel />
       <section className="hero">
         <div className="container">
           <div className="hero-topline">
             <div className="eyebrow">Autonomous Web Data Extractor</div>
-            {!data && guestUsage > 0 && guestUsage < 3 && (
-              <button className="guest-counter" type="button" onClick={() => openAuth("signup")}>
-                {3 - guestUsage} guest extraction{3 - guestUsage === 1 ? "" : "s"} left · Sign up free
-              </button>
-            )}
           </div>
           <h1>Turn web tables into clean data.</h1>
           <p className="subtitle">
