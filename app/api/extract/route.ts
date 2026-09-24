@@ -28,28 +28,42 @@ export async function POST(request: Request) {
   try {
     const authorization = request.headers.get("authorization") ?? "";
     const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-    if (!token) return NextResponse.json({ error: "Please sign in before extracting." }, { status: 401 });
+    const isGuest = !token;
+    let supabase: ReturnType<typeof getSupabase> | null = null;
+    let plan: "free" | "pro" = "free";
+    let usedToday = 0;
 
-    const supabase = getSupabase(token);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
+    if (!isGuest) {
+      supabase = getSupabase(token);
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return NextResponse.json({ error: "Your session is invalid. Please sign in again." }, { status: 401 });
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles").select("plan").eq("user_id", userData.user.id).maybeSingle();
-    if (profileError) return NextResponse.json({ error: "Could not check your account plan." }, { status: 500 });
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles").select("plan").eq("user_id", userData.user.id).maybeSingle();
+      if (profileError) return NextResponse.json({ error: "Could not check your account plan." }, { status: 500 });
 
-    const plan = profile?.plan === "pro" ? "pro" : "free";
-    const { count, error: countError } = await supabase
-      .from("extraction_usage").select("id", { count: "exact", head: true })
-      .eq("user_id", userData.user.id).eq("status", "success").gte("created_at", startOfTodayIso());
-    if (countError) return NextResponse.json({ error: "Could not check your daily usage limit." }, { status: 500 });
+      plan = profile?.plan === "pro" ? "pro" : "free";
+      const { count, error: countError } = await supabase
+        .from("extraction_usage").select("id", { count: "exact", head: true })
+        .eq("user_id", userData.user.id).eq("status", "success").gte("created_at", startOfTodayIso());
+      if (countError) return NextResponse.json({ error: "Could not check your daily usage limit." }, { status: 500 });
 
-    const usedToday = count ?? 0;
-    if (plan === "free" && usedToday >= DAILY_LIMIT) {
-      return NextResponse.json({
-        error: "Daily free limit reached. You have used all 3 extractions for today. Your limit resets tomorrow.",
-        code: "DAILY_LIMIT_REACHED", plan, usedToday, dailyLimit: DAILY_LIMIT, remainingToday: 0
-      }, { status: 429 });
+      usedToday = count ?? 0;
+      if (plan === "free" && usedToday >= DAILY_LIMIT) {
+        return NextResponse.json({
+          error: "Daily free limit reached. You have used all 3 extractions for today. Your limit resets tomorrow.",
+          code: "DAILY_LIMIT_REACHED", plan, usedToday, dailyLimit: DAILY_LIMIT, remainingToday: 0
+        }, { status: 429 });
+      }
+    } else {
+      const guestUsed = Number(request.headers.get("x-guest-extractions") ?? "0");
+      if (guestUsed >= DAILY_LIMIT) {
+        return NextResponse.json({
+          error: "You've used your 3 free guest extractions. Create a free account to continue.",
+          code: "GUEST_LIMIT_REACHED", plan: "free", usedToday: DAILY_LIMIT, dailyLimit: DAILY_LIMIT, remainingToday: 0
+        }, { status: 429 });
+      }
+      usedToday = guestUsed;
     }
 
     const body = await request.json();
@@ -83,10 +97,12 @@ export async function POST(request: Request) {
 
     const html = await response.text();
     const tables = extractTables(html);
-    const { error: usageError } = await supabase.rpc("record_extraction_usage", {
-      p_source_url: target.toString(), p_table_count: tables.length
-    });
-    if (usageError) return NextResponse.json({ error: "Extraction succeeded, but usage could not be recorded." }, { status: 500 });
+    if (supabase) {
+      const { error: usageError } = await supabase.rpc("record_extraction_usage", {
+        p_source_url: target.toString(), p_table_count: tables.length
+      });
+      if (usageError) return NextResponse.json({ error: "Extraction succeeded, but usage could not be recorded." }, { status: 500 });
+    }
 
     const newUsedToday = usedToday + 1;
     return NextResponse.json({
