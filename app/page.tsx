@@ -425,7 +425,7 @@ export default function Home() {
                 <h2>{data.title || "Extracted tables"}</h2>
                 <div className="meta">
                   {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected ·{" "}
-                  {data.plan === "pro" ? "Pro plan · unlimited daily extractions" : `${data.remainingToday}/3 free extractions remaining today`}
+                  {data.plan === "pro" ? "Pro plan · unlimited daily extractions" : `${isAuthenticated ? data.remainingToday : Math.max(3 - guestUsage, 0)}/3 free extractions remaining today`}
                 </div>
               </div>
               <div className="export-actions">
