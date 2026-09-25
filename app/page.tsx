@@ -126,6 +126,14 @@ export default function Home() {
       const accessToken = sessionData.session?.access_token;
       const currentGuestUsage = getGuestUsage();
 
+      if (!accessToken && currentGuestUsage >= 3) {
+        setLoading(false);
+        window.sessionStorage.setItem("pending_extraction_url", targetUrl.trim());
+        setError("");
+        openAuth("signup");
+        return;
+      }
+
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
@@ -405,12 +413,7 @@ export default function Home() {
           {usageRemaining !== null && !error && isAuthenticated && data?.plan === "free" && (
             <div className="usage-banner">Free plan: <strong>{usageRemaining}/3</strong> extractions remaining today.</div>
           )}
-          {!isAuthenticated && !error && !data && (
-            <div className="guest-plan-note">
-            Free plan: 3 successful extractions per day.
-            <button type="button" onClick={() => openAuth("signup")}>Create a free account</button>
-          </div>
-          )}
+
         </div>
 
         {isAuthenticated && <PlanCard />}
