@@ -75,6 +75,7 @@ export default function PlanCard() {
           const verifyPayload = await verifyResponse.json();
           if (!verifyResponse.ok) throw new Error(verifyPayload.error ?? "Payment verification failed.");
           setPlan("pro");
+          window.dispatchEvent(new CustomEvent("plan-updated", { detail: "pro" }));
           setPricingOpen(false);
           setMessage("Payment verified. Your Pro plan is now active.");
         },
