@@ -7,8 +7,22 @@ body {
   color: #e2e8f0;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.brand img {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  flex: 0 0 auto;
+}
+
 h1 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 21px;
 }
 
