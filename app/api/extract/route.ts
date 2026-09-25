@@ -68,51 +68,6 @@ function getSupabase(token: string) {
   return createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } } });
 }
 
-function getGuestSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase service role is not configured.");
-  return createClient(url, key);
-}
-
-async function recordGuestUsage(guestId: string) {
-  const supabase = getGuestSupabase();
-  const { data: existing, error: readError } = await supabase
-    .from("guest_extraction_usage")
-    .select("usage_date, extraction_count")
-    .eq("guest_id", guestId)
-    .maybeSingle();
-
-  if (readError) throw readError;
-
-  const today = new Date().toISOString().slice(0, 10);
-
-  if (!existing || existing.usage_date !== today) {
-    const { error } = await supabase.from("guest_extraction_usage").upsert({
-      guest_id: guestId,
-      usage_date: today,
-      extraction_count: 1,
-      updated_at: new Date().toISOString()
-    });
-    if (error) throw error;
-    return 1;
-  }
-
-  if (existing.extraction_count >= DAILY_LIMIT) {
-    throw new Error("Guest daily limit reached");
-  }
-
-  const nextCount = existing.extraction_count + 1;
-  const { error } = await supabase.from("guest_extraction_usage")
-    .update({ extraction_count: nextCount, updated_at: new Date().toISOString() })
-    .eq("guest_id", guestId)
-    .eq("usage_date", today)
-    .eq("extraction_count", existing.extraction_count);
-
-  if (error) throw error;
-  return nextCount;
-}
-
 function startOfTodayIso() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -255,60 +210,15 @@ export async function POST(request: Request) {
     }
 
     if (isGuest) {
-      const rawCookie = request.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${GUEST_COOKIE}=([^;]+)`))?.[1];
-      const guestId = rawCookie && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawCookie)
-        ? rawCookie
-        : crypto.randomUUID();
-
-      let consumed: number | null = null;
-      let guestUsageError: Error | null = null;
-      try {
-        consumed = await recordGuestUsage(guestId);
-      } catch (error) {
-        guestUsageError = error instanceof Error ? error : new Error("Guest usage storage failed.");
-      }
-
-      if (guestUsageError) {
-        if (guestUsageError.message?.includes("Guest daily limit reached")) {
-          return NextResponse.json({
-            error: "You've used your 3 free guest extractions. Create a free account to continue.",
-            code: "GUEST_LIMIT_REACHED",
-            plan: "free",
-            usedToday: DAILY_LIMIT,
-            dailyLimit: DAILY_LIMIT,
-            remainingToday: 0
-          }, { status: 429 });
-        }
-
-        return NextResponse.json({
-          error: "Could not record your guest usage. Please refresh the page and try again."
-        }, { status: 500 });
-      }
-
-      const guestUsedToday = Number(consumed ?? 1);
-      const result = NextResponse.json({
+      return NextResponse.json({
         url: finalUrl.toString(),
         title: extractPageTitle(html),
         tables,
         plan: "free",
-        usedToday: guestUsedToday,
         dailyLimit: DAILY_LIMIT,
-        remainingToday: Math.max(DAILY_LIMIT - guestUsedToday, 0)
+        remainingToday: null
       });
-
-      result.cookies.set({
-        name: GUEST_COOKIE,
-        value: guestId,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365
-      });
-
-      return result;
     }
-
     const newUsedToday = usedToday + 1;
     return NextResponse.json({
       url: finalUrl.toString(),
