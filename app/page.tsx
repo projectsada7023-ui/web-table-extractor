@@ -37,16 +37,37 @@ export default function Home() {
   const [usageRemaining, setUsageRemaining] = useState<number | null>(null);
   const [guestUsage, setGuestUsage] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [cleanMessage, setCleanMessage] = useState("");
   const extractorControlsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => setIsAuthenticated(Boolean(data.session)));
+    const loadAccountPlan = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      setIsAuthenticated(Boolean(sessionData.session));
+      if (!sessionData.session?.user) {
+        setAccountPlan("free");
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("user_id", sessionData.session.user.id)
+        .maybeSingle();
+      setAccountPlan(profile?.plan === "pro" ? "pro" : "free");
+    };
+    void loadAccountPlan();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(Boolean(session));
     });
+
+    const handlePlanUpdated = (event: Event) => {
+      const plan = (event as CustomEvent<"free" | "pro">).detail;
+      if (plan === "pro" || plan === "free") setAccountPlan(plan);
+    };
+    window.addEventListener("plan-updated", handlePlanUpdated);
 
     const handleAuthSignedIn = () => {
       const pendingUrl = window.sessionStorage.getItem("pending_extraction_url");
@@ -434,7 +455,7 @@ export default function Home() {
                 <h2>{data.title || "Extracted tables"}</h2>
                 <div className="meta">
                   {data.tables.length} table{data.tables.length === 1 ? "" : "s"} detected ·{" "}
-                  {data.plan === "pro" ? "Pro plan · unlimited daily extractions" : `${isAuthenticated ? data.remainingToday : Math.max(3 - guestUsage, 0)}/3 free extractions remaining today`}
+                  {isPro ? "Pro plan · unlimited daily extractions" : `${isAuthenticated ? data.remainingToday : Math.max(3 - guestUsage, 0)}/3 free extractions remaining today`}
                 </div>
               </div>
               <div className="export-actions">
