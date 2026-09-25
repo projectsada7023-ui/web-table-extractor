@@ -1,5 +1,5 @@
 body {
-  width: 420px;
+  width: 460px;
   margin: 0;
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -69,25 +69,54 @@ button:disabled, select:disabled {
 
 .preview {
   margin-top: 16px;
-  max-height: 280px;
+  max-height: 300px;
   overflow: auto;
   border: 1px solid #334155;
   border-radius: 9px;
 }
 
 table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
   font-size: 12px;
 }
 
 th, td {
-  padding: 7px 8px;
+  padding: 7px 10px;
   border-bottom: 1px solid #334155;
   text-align: left;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 th {
   background: #1e293b;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+th:first-child, td:first-child {
+  width: 1%;
+}
+
+th, td {
+  max-width: 240px;
+}
+
+td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.preview::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 999px;
 }
