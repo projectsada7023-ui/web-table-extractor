@@ -1,7 +1,7 @@
 body {
-  width: 360px;
+  width: 420px;
   margin: 0;
-  padding: 18px;
+  padding: 20px;
   font-family: Arial, sans-serif;
   background: #0f172a;
   color: #e2e8f0;
@@ -9,17 +9,18 @@ body {
 
 h1 {
   margin: 0 0 8px;
-  font-size: 20px;
+  font-size: 21px;
 }
 
 p {
   color: #94a3b8;
   font-size: 13px;
+  line-height: 1.45;
 }
 
 label {
   display: block;
-  margin: 14px 0 6px;
+  margin: 16px 0 7px;
   font-size: 12px;
   font-weight: 700;
 }
@@ -27,8 +28,8 @@ label {
 select, button {
   width: 100%;
   box-sizing: border-box;
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 9px;
+  padding: 11px;
   font-size: 13px;
 }
 
@@ -39,7 +40,7 @@ select {
 }
 
 button {
-  margin-top: 14px;
+  margin-top: 16px;
   border: 0;
   cursor: pointer;
   background: #2563eb;
@@ -53,21 +54,21 @@ button:disabled, select:disabled {
 }
 
 .preview {
-  margin-top: 14px;
-  max-height: 220px;
+  margin-top: 16px;
+  max-height: 280px;
   overflow: auto;
   border: 1px solid #334155;
-  border-radius: 8px;
+  border-radius: 9px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 th, td {
-  padding: 6px;
+  padding: 7px 8px;
   border-bottom: 1px solid #334155;
   text-align: left;
   white-space: nowrap;
