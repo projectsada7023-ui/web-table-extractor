@@ -20,7 +20,12 @@ function extractTables() {
     const width = Math.max(headerCells.length, ...rows.map((row) => row.length), 0);
     const headers = Array.from({ length: width }, (_, i) => headerCells[i] || `Column ${i + 1}`);
 
-    const dataRows = headerRow ? rows : rows.slice(1);
+    // When a real <thead> exists, remove that header row from the data rows.
+    // Otherwise, treat the first row as the header and keep the remaining rows as data.
+    const dataRows = headerRow
+      ? rows.slice(1)
+      : rows.slice(1);
+
     const normalizedRows = dataRows.map((row) =>
       Array.from({ length: width }, (_, i) => row[i] || "")
     );
