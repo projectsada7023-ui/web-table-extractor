@@ -370,8 +370,9 @@ export default function Home() {
           </div>
           <h1>Turn web tables into clean data.</h1>
           <p className="subtitle">
-            Paste a public webpage URL. The engine finds HTML tables, extracts their headers and rows,
-            and lets you edit and export the selected table as CSV, JSON, and Excel.
+            Paste a public webpage URL to detect and extract HTML tables, edit rows and columns, clean your data,
+            copy results to Google Sheets, and export as CSV, JSON, or Excel. Pro adds smart cleaning, scheduled
+            extraction, and unlimited daily usage.
           </p>
         </div>
       </section>
