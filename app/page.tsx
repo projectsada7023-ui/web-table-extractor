@@ -379,7 +379,7 @@ export default function Home() {
     URL.revokeObjectURL(href);
   }
 
-  const isPro = data?.plan === "pro";
+  const isPro = accountPlan === "pro" || data?.plan === "pro";
 
   return (
     <main>
