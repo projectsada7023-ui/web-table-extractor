@@ -152,6 +152,14 @@ export default function Home() {
           openAuth("signup");
           return;
         }
+
+        if (payload.code === "DAILY_LIMIT_REACHED" && accessToken) {
+          setLoading(false);
+          setError("");
+          window.dispatchEvent(new CustomEvent("open-pricing"));
+          return;
+        }
+
         throw new Error(payload.error ?? "Extraction failed.");
       }
       setData(payload);
